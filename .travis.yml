@@ -27,6 +27,7 @@ cache:
 env:
   global:
   - PULL_REQUEST=${TRAVIS_PULL_REQUEST}
+  - JAVA_OPTS=-Xmx2g
   - COMMIT=${TRAVIS_COMMIT::8}
   - TAG=${TRAVIS_TAG:-latest}
   - BRANCH=s390x-test
