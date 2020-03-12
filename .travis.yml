@@ -28,7 +28,7 @@ env:
   - PULL_REQUEST=${TRAVIS_PULL_REQUEST}
   - COMMIT=${TRAVIS_COMMIT::8}
   - TAG=${TRAVIS_TAG:-latest}
-  - BRANCH=${TRAVIS_BRANCH:-master}
+  - BRANCH=s390x-test
   - DOCKER_ORG=strimzici
   - DOCKER_REGISTRY=docker.io
   - TEST_CLUSTER=minikube
