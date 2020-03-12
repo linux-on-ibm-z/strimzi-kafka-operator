@@ -12,6 +12,7 @@ jdk:
 services:
 - docker
 before_install:
+- sudo apt-get install maven
 - gem install asciidoctor
 install:
 - mvn -q install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
