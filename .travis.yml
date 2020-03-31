@@ -15,6 +15,7 @@ before_install:
 - sudo apt-get update && sudo apt-get install maven
 - gem install asciidoctor
 install:
+- export JVM_ARGS="-Xmx1024m -XX:MaxPermSize=256m"
 - mvn -q install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 before_script:
 - "./.travis/install_yq.sh"
