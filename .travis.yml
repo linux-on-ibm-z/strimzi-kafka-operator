@@ -12,6 +12,7 @@ services:
 - docker
 before_install:
 - docker version
+- df -h
 - sudo apt-get update && sudo apt-get install maven
 - gem install asciidoctor
 install:
