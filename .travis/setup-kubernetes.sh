@@ -100,13 +100,16 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     echo "Kubelet status:"
     sudo systemctl status kubelet
     echo "--------------------------------------"
-    echo "journalctl ouput:"
-    sudo journalctl -xeu kubelet
+    #echo "journalctl ouput:"
+    #sudo journalctl -xeu kubelet
     echo "--------------------------------------"
     echo "Enablig kubelet service"
     sudo systemctl enable kubelet.service
     echo "--------------------------------------"
-    
+    sudo -E minikube start --vm-driver=none --kubernetes-version=v1.15.0 \
+      --insecure-registry=localhost:5000 --extra-config=apiserver.authorization-mode=RBAC
+    sudo chown -R travis: /home/travis/.minikube/
+    sudo -E minikube addons enable default-storageclass
     
     wait_for_minikube
 
