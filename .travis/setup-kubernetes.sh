@@ -89,12 +89,14 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     export KUBECONFIG=$HOME/.kube/config
     echo "Enablig kubelet service"
     sudo systemctl enable kubelet.service
+        echo "linking kmsg--------------------------------------"
+    sudo ln -s /dev/console /dev/kmsg
     echo "--------------------------------------"
     sudo -E minikube start --vm-driver=none --kubernetes-version=v1.15.0 \
       --insecure-registry=localhost:5000 --extra-config=apiserver.authorization-mode=RBAC
     sudo chown -R travis: /home/travis/.minikube/
     sudo -E minikube addons enable default-storageclass
-    
+    echo "--------------------------------------"
     echo "Kubelet status:"
     sudo systemctl status kubelet
     echo "--------------------------------------"
