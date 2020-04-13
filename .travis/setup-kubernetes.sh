@@ -86,6 +86,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
 
     docker run -d -p 5000:5000 ibmcom/dockerdistribution-s390x:2.7.1
     sudo apt-get install linux-image-$(uname -r)
+    swapoff -a && sudo rm -rf /var/swap
 
     export KUBECONFIG=$HOME/.kube/config
     echo "Enablig kubelet service"
