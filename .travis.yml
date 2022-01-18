@@ -1,0 +1,46 @@
+dist: focal
+sudo: required
+language: java
+jobs:
+  fast_finish: true
+  include:
+  - build: s390x
+    os: linux
+    arch: s390x
+    addons:
+      apt:
+        packages:
+        - maven
+jdk:
+- openjdk11
+services:
+- docker
+before_install:
+- gem install asciidoctor
+- gem install asciidoctor-pdf
+- "./.travis/install_yq.sh"
+- "./.travis/install_shellcheck.sh"
+install:
+- make java_install
+before_script:
+- "./.travis/setup-kubernetes.sh"
+- "./.travis/install_helm.sh"
+script:
+- "./.travis/build.sh"
+- "./.travis/run_system_test.sh"
+cache:
+  directories:
+  - "$HOME/.m2/repository"
+  - "docker-images/artifacts/binaries/kafka/archives"
+env:
+  global:
+  - PULL_REQUEST=${TRAVIS_PULL_REQUEST}
+  - COMMIT=${TRAVIS_COMMIT::8}
+  - TAG=${TRAVIS_TAG:-latest}
+  - BRANCH=${TRAVIS_BRANCH:-master}
+  - TEST_CLUSTER="minikube"
+  - TEST_KUBECTL_VERSION="v1.16.0"
+  - TEST_MINIKUBE_VERSION="v1.24.0"
+  - STRIMZI_DEFAULT_LOG_LEVEL=DEBUG
+  - MVN_ARGS="-DskipTests -e -V -B"
+  - DOCKER_BUILD_ARGS="-q"
