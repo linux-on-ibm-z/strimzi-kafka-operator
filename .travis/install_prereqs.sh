@@ -14,5 +14,9 @@ sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-8 40
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 40
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 40
 sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-8 40
+mkdir -p ~/.docker/cli-plugins
+curl -sSL "https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6.1.linux-s390x" > ~/.docker/cli-plugins/docker-buildx
+chmod a+x ~/.docker/cli-plugins/docker-buildx
 sudo service docker start
 sudo setfacl --modify user:$USER:rw /var/run/docker.sock
+docker --version
