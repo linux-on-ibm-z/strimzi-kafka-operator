@@ -25,4 +25,4 @@ export DOCKER_TAG=latest
 export DOCKER_BUILDX=buildx
 export DOCKER_BUILD_ARGS="--platform linux/s390x --load"
 make clean
-make MVN_ARGS='-q -DskipTests -DskipITs' docker_build
+make MVN_ARGS='-q -DskipTests -DskipITs' all
