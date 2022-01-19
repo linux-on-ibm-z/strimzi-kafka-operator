@@ -5,6 +5,7 @@ export S390X_JNI_JAR_DIR=$HOME/s390x_jni_jar
 export PREFIX=/usr/local
 
 if [ ! -f $S390X_JNI_JAR_DIR/rocksdbjni-6.19.3.jar ]; then
+	printf -- "Building rocksdbjni jars \n"
 	#Install AdoptOpenJDK8 + OpenJ9 with Large heap
 	cd $HOME
 	wget https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u282-b08_openj9-0.24.0/OpenJDK8U-jdk_s390x_linux_openj9_linuxXL_8u282b08_openj9-0.24.0.tar.gz
