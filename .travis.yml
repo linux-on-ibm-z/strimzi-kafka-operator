@@ -26,6 +26,7 @@ script:
 cache:
   directories:
   - "$HOME/.m2"
+  - "$HOME/s390x_jni_jar"
 env:
   global:
   - PULL_REQUEST=${TRAVIS_PULL_REQUEST}
