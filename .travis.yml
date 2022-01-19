@@ -12,12 +12,12 @@ before_install:
 - gem install asciidoctor asciidoctor-pdf
 - "./.travis/install_yq.sh"
 - "./.travis/install_rocksdbjni.sh"
+- "./.travis/setup-helm.sh"
 - "./.travis/build_images.sh"
 install:
 - mvn -q install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 before_script:
 - "./.travis/setup-kubernetes.sh"
-- "./.travis/setup-helm.sh"
 after_script:
 - "./.travis/build_postImages.sh"
 script:
@@ -36,7 +36,6 @@ env:
   - TEST_CLUSTER=minikube
   - TEST_KUBECTL_VERSION=v1.23.1
   - TEST_NSENTER_VERSION=2.32
-  - TEST_HELM2_VERSION=v2.16.3
   - TEST_HELM3_VERSION=v3.7.2
   - TEST_MINIKUBE_VERSION=v1.2.0
   - STRIMZI_DEFAULT_LOG_LEVEL=DEBUG
