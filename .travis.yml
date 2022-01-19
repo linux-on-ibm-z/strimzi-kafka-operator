@@ -8,6 +8,7 @@ services:
 - docker
 before_install:
 - if [ $(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p') -gt 1 ] ; then export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p'); export JAVA_VERSION=$JAVA_VERSION_BUILD; else export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2/p'); export JAVA_VERSION=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2.\3/p'); fi;
+- echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 - "./.travis/install_prereqs.sh"
 - gem install asciidoctor asciidoctor-pdf
 - "./.travis/install_yq.sh"
