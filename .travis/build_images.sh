@@ -8,6 +8,7 @@ wget https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6.1.lin
 mkdir -p ~/.docker/cli-plugins
 mv buildx-v0.6.1.linux-s390x ~/.docker/cli-plugins/docker-buildx
 chmod a+x ~/.docker/cli-plugins/docker-buildx
+sudo systemctl daemon-reload && sudo service docker restart
 
 # Build kaniko-executor docker image locally
 cd $HOME
