@@ -20,3 +20,4 @@ chmod a+x ~/.docker/cli-plugins/docker-buildx
 sudo service docker start
 sudo setfacl --modify user:$USER:rw /var/run/docker.sock
 docker --version
+docker buildx version
