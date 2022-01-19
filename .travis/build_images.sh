@@ -2,13 +2,6 @@
 
 export PATH=$HOME/apache-maven-3.8.2/bin:$PATH
 
-# Install buildx for docker
-cd $SOURCE_ROOT
-wget https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6.1.linux-s390x
-mkdir -p ~/.docker/cli-plugins
-mv buildx-v0.6.1.linux-s390x ~/.docker/cli-plugins/docker-buildx
-chmod a+x ~/.docker/cli-plugins/docker-buildx
-
 # Build kaniko-executor docker image locally
 cd $HOME
 git clone -b v1.7.0 https://github.com/GoogleContainerTools/kaniko.git
