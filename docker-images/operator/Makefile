@@ -32,8 +32,11 @@ clean:
 	unzip -qo $(cluster_operator_dist) -d tmp
 	touch .cluster-operator.tmp
 
-docker_build: .topic-operator.tmp .user-operator.tmp .kafka-init.tmp .cluster-operator.tmp docker_build_default
-	# Pull dependencies first
+.jni-jars.tmp: tmp
+       cp -f /tmp/opertemp/libs/rocksdbjni-5.18.4.jar tmp/lib/org.rocksdb.rocksdbjni-5.18.4.jar
+
+docker_build: .topic-operator.tmp .user-operator.tmp .kafka-init.tmp .cluster-operator.tmp .jni-jars.tmp docker_build_default
+        # Pull dependencies first
 
 include ../../Makefile.docker
 
