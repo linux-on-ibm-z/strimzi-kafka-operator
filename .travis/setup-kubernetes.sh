@@ -59,7 +59,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     export KUBECONFIG=$HOME/.kube/config
     sudo -E minikube start --kubernetes-version=v1.22.3 \
       --extra-config=apiserver.authorization-mode=RBAC \
-      --base-image=kicbase/stable:v0.0.28
+      --driver=none --base-image=kicbase/stable:v0.0.28
     sudo chown -R travis: /home/travis/.minikube/
     sudo -E minikube addons enable default-storageclass
 
