@@ -12,6 +12,7 @@ before_install:
 - "./.travis/install_yq.sh"
 - "./.travis/install_rocksdbjni.sh"
 - "./.travis/setup-helm.sh"
+- export PATH=$HOME/apache-maven-3.8.2/bin:$PATH
 - "./.travis/build_images.sh"
 install:
 - mvn -q install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
