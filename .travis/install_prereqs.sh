@@ -10,8 +10,9 @@ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 40
 sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-8 40
 
 # test
-#cd $HOME
-#git clone -b v1.7.0 https://github.com/GoogleContainerTools/kaniko.git
-#cd kaniko/
-#docker buildx build --platform linux/s390x --load --build-arg GOARCH=s390x -t local/kaniko-project/executor:v1.7.0 -f ./deploy/Dockerfile .
-#docker tag local/kaniko-project/executor:v1.7.0 gcr.io/kaniko-project/executor:v1.7.0
+cd $HOME
+git clone -b v1.7.0 https://github.com/GoogleContainerTools/kaniko.git
+cd kaniko/
+docker pull golang:1.15
+docker buildx build --platform linux/s390x --load --build-arg GOARCH=s390x -t local/kaniko-project/executor:v1.7.0 -f ./deploy/Dockerfile .
+docker tag local/kaniko-project/executor:v1.7.0 gcr.io/kaniko-project/executor:v1.7.0
