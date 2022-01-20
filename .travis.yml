@@ -19,6 +19,7 @@ before_install:
 - sudo service docker restart
 - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 - "./.travis/install_prereqs.sh"
+- "./.travis/setup-kubernetes.sh"
 - gem install asciidoctor asciidoctor-pdf
 - "./.travis/install_yq.sh"
 - "./.travis/install_rocksdbjni.sh"
