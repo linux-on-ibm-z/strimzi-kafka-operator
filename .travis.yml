@@ -6,8 +6,13 @@ jdk:
 - openjdk11
 services:
 - docker
+cache:
+  directories:
+  - $HOME/.m2
 before_install:
 - if [ $(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p') -gt 1 ] ; then export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p'); export JAVA_VERSION=$JAVA_VERSION_BUILD; else export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2/p'); export JAVA_VERSION=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2.\3/p'); fi;
+- export M2_HOME=$HOME/apache-maven-3.8.2
+- export PATH=$M2_HOME/bin:$PATH
 - mkdir -vp ~/.docker/cli-plugins/
 - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6.1.linux-s390x" > ~/.docker/cli-plugins/docker-buildx
 - chmod a+x ~/.docker/cli-plugins/docker-buildx
