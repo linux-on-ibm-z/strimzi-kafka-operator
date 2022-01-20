@@ -59,7 +59,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     # We can turn on network polices support by adding the following options --network-plugin=cni --cni=calico
     # We have to allow trafic for ITS when NPs are turned on
     # We can allow NP after Strimzi#4092 which should fix some issues on STs side
-    minikube start --vm-driver=docker --kubernetes-version=${KUBE_VERSION} \
+    minikube start --vm-driver=docker --kubernetes-version=v1.22.3 \
       --extra-config=apiserver.authorization-mode=Node,RBAC \
       --cpus=${MINIKUBE_CPU}
 
