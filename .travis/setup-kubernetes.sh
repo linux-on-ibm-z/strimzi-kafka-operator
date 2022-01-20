@@ -61,6 +61,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     # We can allow NP after Strimzi#4092 which should fix some issues on STs side
     sudo apt-get install linux-image-$(uname -r) -y
     sudo systemctl enable docker.service
+    sudo systemctl restart docker
     minikube start --vm-driver=docker --kubernetes-version=v1.22.3 \
       --extra-config=apiserver.authorization-mode=Node,RBAC \
       --cpus=${MINIKUBE_CPU}
