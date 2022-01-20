@@ -14,5 +14,6 @@ cd $HOME
 git clone -b v1.7.0 https://github.com/GoogleContainerTools/kaniko.git
 cd kaniko/
 docker pull golang:1.15
+docker pull debian:buster-slim
 docker buildx build --platform linux/s390x --load --build-arg GOARCH=s390x -t local/kaniko-project/executor:v1.7.0 -f ./deploy/Dockerfile .
 docker tag local/kaniko-project/executor:v1.7.0 gcr.io/kaniko-project/executor:v1.7.0
