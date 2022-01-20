@@ -47,7 +47,7 @@ env:
   - TEST_KUBECTL_VERSION=v1.23.1
   - TEST_NSENTER_VERSION=2.32
   - TEST_HELM3_VERSION=v3.7.2
-  - TEST_MINIKUBE_VERSION=v1.2.0
+  - TEST_MINIKUBE_VERSION=v1.24.0
   - STRIMZI_DEFAULT_LOG_LEVEL=DEBUG
   - MVN_ARGS="-q -Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2"
   - DOCKER_BUILD_ARGS="-q"

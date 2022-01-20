@@ -43,10 +43,8 @@ function label_node {
 
 if [ "$TEST_CLUSTER" = "minikube" ]; then
     install_kubectl
-    if [ "${TEST_MINIKUBE_VERSION:-latest}" = "latest" ]; then
-        TEST_MINIKUBE_URL=https://storage.googleapis.com/minikube/releases/latest/minikube-linux-s390x
-        TEST_MINIKUBE_URL=https://github.com/kubernetes/minikube/releases/download/${TEST_MINIKUBE_VERSION}/minikube-linux-s390x
-    fi
+    TEST_MINIKUBE_URL=https://storage.googleapis.com/minikube/releases/latest/minikube-linux-s390x
+    TEST_MINIKUBE_URL=https://github.com/kubernetes/minikube/releases/download/${TEST_MINIKUBE_VERSION}/minikube-linux-s390x
     curl -Lo minikube ${TEST_MINIKUBE_URL} && chmod +x minikube
     sudo cp minikube /usr/bin
 
