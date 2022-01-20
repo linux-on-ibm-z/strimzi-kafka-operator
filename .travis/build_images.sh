@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-export PATH=$HOME/apache-maven-3.8.2/bin:$PATH
-
 # Install buildx for docker
 mkdir -p ~/.docker/cli-plugins
 curl -sSL "https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6.1.linux-s390x" > ~/.docker/cli-plugins/docker-buildx
