@@ -57,7 +57,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     touch $HOME/.kube/config
 
     export KUBECONFIG=$HOME/.kube/config
-    sudo apt-get install linux-image-$(uname -r)
+    sudo apt-get install linux-image-$(uname -r) -y
     sudo -E minikube start --kubernetes-version=v1.22.3 \
       --extra-config=apiserver.authorization-mode=RBAC \
       --vm-driver=none
