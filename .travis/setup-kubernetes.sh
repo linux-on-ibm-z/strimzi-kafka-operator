@@ -60,26 +60,13 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     # We can turn on network polices support by adding the following options --network-plugin=cni --cni=calico
     # We have to allow trafic for ITS when NPs are turned on
     # We can allow NP after Strimzi#4092 which should fix some issues on STs side
-    sudo apt-get install linux-image-$(uname -r) socat -y
-    sudo cat > /etc/docker/daemon.json <<EOF
-{
-  "exec-opts": ["native.cgroupdriver=systemd"],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "100m"
-  },
-  "storage-driver": "overlay2",
-  "storage-opts": [
-    "overlay2.override_kernel_check=true"
-  ]
-}
-EOF
+    sudo apt-get install linux-image-$(uname -r) socat kubelet -y
     sudo systemctl enable docker.service
     sudo systemctl restart docker
+    sudo systemctl status kubelet
     minikube start --vm-driver=none --kubernetes-version=v1.23.1 \
       --extra-config=apiserver.authorization-mode=Node,RBAC \
       --extra-config=kubelet.cgroup-driver=systemd --cpus=${MINIKUBE_CPU}
-    sudo systemctl status kubelet
 
     if [ $? -ne 0 ]
     then
