@@ -12,7 +12,7 @@ env:
 
 before_install:
 - sudo apt-get update
-- sudo apt-get -qq -y install conntrack docker.io
+- sudo apt-get -qq -y install conntrack docker.io socat
 
 before_script:
 # Download kubectl, which is a requirement for using minikube.
