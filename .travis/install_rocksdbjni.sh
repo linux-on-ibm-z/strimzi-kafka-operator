@@ -4,7 +4,7 @@ export CURPATH=$PATH
 export S390X_JNI_JAR_DIR=$HOME/s390x_jni_jar
 export PREFIX=/usr/local
 
-if [ ! -f $HOME/s390x_jni_jar/rocksdbjni-6.19.3.jar ]; then
+if [ ! -f $S390X_JNI_JAR_DIR/rocksdbjni-6.19.3.jar ]; then
 	printf -- "Building rocksdbjni jars \n"
 	#Install AdoptOpenJDK8 + OpenJ9 with Large heap
 	cd $HOME
@@ -41,6 +41,7 @@ if [ ! -f $HOME/s390x_jni_jar/rocksdbjni-6.19.3.jar ]; then
 	cd $HOME
 	mv rocksdb rocksdb-6 && cd rocksdb-6/
 	git checkout v6.19.3
+	curl -sSL https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/RocksDB/v6.19.3/patch/rocksdb.diff | patch -p1 || error "rocksdb_v6.19.3.diff"
 	PORTABLE=1 make -j$(nproc) rocksdbjavastatic
 	# Store rocksdbjni-6.19.3.jar in a temporary directory
 	cp -f java/target/rocksdbjni-6.19.3-linux64.jar $S390X_JNI_JAR_DIR/rocksdbjni-6.19.3.jar
