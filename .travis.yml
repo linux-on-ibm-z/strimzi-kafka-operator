@@ -1,6 +1,6 @@
 sudo: required
 # We need the systemd for the kubeadm and it's default from 16.04+
-dist: xenial
+dist: bionic
 env:
   global:
     - CHANGE_MINIKUBE_NONE_USER=true
@@ -23,7 +23,7 @@ before_script:
 - sudo minikube start --profile=minikube --vm-driver=none
 - minikube update-context --profile=minikube
 - "sudo chown -R travis: /home/travis/.minikube/"
-- eval "$(minikube docker-env --profile=minikube)" && export DOCKER_CLI='docker'
+#- eval "$(minikube docker-env --profile=minikube)" && export DOCKER_CLI='docker'
 
 script:
 # Following is just to demo that the kubernetes cluster works.
