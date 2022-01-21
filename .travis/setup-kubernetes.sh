@@ -61,6 +61,19 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     # We have to allow trafic for ITS when NPs are turned on
     # We can allow NP after Strimzi#4092 which should fix some issues on STs side
     sudo apt-get install linux-image-$(uname -r) socat -y
+    sudo cat > /etc/docker/daemon.json <<EOF
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2",
+  "storage-opts": [
+    "overlay2.override_kernel_check=true"
+  ]
+}
+EOF
     sudo systemctl enable docker.service
     sudo systemctl restart docker
     minikube start --vm-driver=none --kubernetes-version=v1.23.1 \
