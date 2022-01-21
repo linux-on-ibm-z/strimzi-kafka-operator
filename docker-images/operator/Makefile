@@ -33,10 +33,10 @@ clean:
 	touch .cluster-operator.tmp
 
 .jni-jars.tmp: tmp
-       cp -f ${HOME}/s390x_jni_jar/rocksdbjni-5.18.4.jar tmp/lib/org.rocksdb.rocksdbjni-5.18.4.jar
+	cp -f ${HOME}/s390x_jni_jar/rocksdbjni-5.18.4.jar tmp/lib/org.rocksdb.rocksdbjni-5.18.4.jar
 
 docker_build: .topic-operator.tmp .user-operator.tmp .kafka-init.tmp .cluster-operator.tmp .jni-jars.tmp docker_build_default
-       # Pull dependencies first
+	# Pull dependencies first
 
 include ../../Makefile.docker
 
