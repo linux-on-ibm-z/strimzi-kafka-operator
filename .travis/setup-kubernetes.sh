@@ -57,6 +57,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     grep cgroup /proc/filesystems
 
     export KUBECONFIG=$HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
     # We can turn on network polices support by adding the following options --network-plugin=cni --cni=calico
     # We have to allow trafic for ITS when NPs are turned on
     # We can allow NP after Strimzi#4092 which should fix some issues on STs side
