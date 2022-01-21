@@ -22,7 +22,7 @@ before_script:
 - mkdir -p $HOME/.kube $HOME/.minikube
 - touch $KUBECONFIG
 - sudo swapoff -a
-- sudo minikube start --profile=minikube --vm-driver=none --alsologtostderr --v=2 --extra-config=kubelet.cgroup-driver=systemd --extra-config=kubeadm.ignore-preflight-errors=SystemVerification
+- sudo minikube start --profile=minikube --vm-driver=none --alsologtostderr --v=2 --extra-config=kubelet.cgroup-driver=systemd --extra-config=kubeadm.ignore-preflight-errors=all
 - minikube update-context --profile=minikube
 - "sudo chown -R travis: /home/travis/.minikube/"
 #- eval "$(minikube docker-env --profile=minikube)" && export DOCKER_CLI='docker'
