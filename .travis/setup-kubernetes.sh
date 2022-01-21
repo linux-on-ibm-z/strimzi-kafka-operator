@@ -52,7 +52,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     export MINIKUBE_HOME=$HOME
     export CHANGE_MINIKUBE_NONE_USER=true
 
-    mkdir -p $HOME/.kube $HOME/.minikube || true
+    mkdir -p $HOME/.kube || true
     touch $HOME/.kube/config
     grep cgroup /proc/filesystems
 
@@ -63,7 +63,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     sudo apt-get install linux-image-$(uname -r) socat -y
     sudo systemctl enable docker.service
     sudo systemctl restart docker
-    minikube start --profile=minikube --vm-driver=none --kubernetes-version=v1.23.1 \
+    minikube start --alsologtostderr --v=2 --vm-driver=none --kubernetes-version=v1.23.1 \
       --extra-config=apiserver.authorization-mode=Node,RBAC \
       --extra-config=kubelet.cgroup-driver=systemd --cpus=${MINIKUBE_CPU}
 
