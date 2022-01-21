@@ -54,7 +54,6 @@ export PATH=$CURPATH
 cd $HOME
 wget https://archive.apache.org/dist/maven/maven-3/3.8.2/binaries/apache-maven-3.8.2-bin.tar.gz
 tar -zxf apache-maven-3.8.2-bin.tar.gz
-export PATH=$HOME/apache-maven-3.8.2/bin:$PATH
 
 # Put locally built jni jars in the local maven repository
 mkdir -p $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.19.3
