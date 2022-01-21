@@ -67,8 +67,20 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     sudo sysctl -p
     sudo systemctl enable docker.service
     sudo systemctl restart docker
-    minikube start --alsologtostderr --v=5  --vm-driver=none --kubernetes-version=v1.21.2 \
-      --extra-config=apiserver.authorization-mode=Node,RBAC
+    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+    sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+    sudo swapoff -a
+    sudo apt-get install -y kubelet kubeadm kubectl
+    sudo swapoff -a
+    sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+    mkdir -p $HOME/.kube
+    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+    sudo kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+    sudo kubectl taint nodes --all node-role.kubernetes.io/master-
+    sudo kubectl get nodes
+    #minikube start --alsologtostderr --v=5  --vm-driver=none --kubernetes-version=v1.21.2 \
+    #  --extra-config=apiserver.authorization-mode=Node,RBAC
 
     if [ $? -ne 0 ]
     then
