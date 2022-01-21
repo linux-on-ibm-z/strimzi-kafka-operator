@@ -11,7 +11,8 @@ env:
     - KUBECONFIG=$HOME/.kube/config
 
 before_install:
-- sudo apt-get -qq -y install conntrack
+- sudo apt-get update
+- sudo apt-get -qq -y install conntrack docker.io
 
 before_script:
 # Download kubectl, which is a requirement for using minikube.
