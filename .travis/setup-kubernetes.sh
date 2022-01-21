@@ -52,7 +52,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     export MINIKUBE_HOME=$HOME
     export CHANGE_MINIKUBE_NONE_USER=true
 
-    mkdir $HOME/.kube || true
+    mkdir -p $HOME/.kube $HOME/.minikube || true
     touch $HOME/.kube/config
     grep cgroup /proc/filesystems
 
@@ -60,11 +60,11 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     # We can turn on network polices support by adding the following options --network-plugin=cni --cni=calico
     # We have to allow trafic for ITS when NPs are turned on
     # We can allow NP after Strimzi#4092 which should fix some issues on STs side
-    sudo apt-get install linux-image-$(uname -r) socat kubelet -y
+    sudo apt-get install linux-image-$(uname -r) socat -y
     sudo systemctl enable docker.service
     sudo systemctl restart docker
     sudo systemctl status kubelet
-    minikube start --vm-driver=none --kubernetes-version=v1.23.1 \
+    minikube start --profile=minikube --vm-driver=none --kubernetes-version=v1.23.1 \
       --extra-config=apiserver.authorization-mode=Node,RBAC \
       --extra-config=kubelet.cgroup-driver=systemd --cpus=${MINIKUBE_CPU}
 
