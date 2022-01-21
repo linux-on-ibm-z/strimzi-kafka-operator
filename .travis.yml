@@ -22,7 +22,7 @@ after_script:
 #- "./.travis/build_postImages.sh"
 script:
 #- "./.travis/build.sh"
-- mvn --help
+- ls $HOME/s390x_jni_jar
 cache:
   directories:
   - "$HOME/.m2"
