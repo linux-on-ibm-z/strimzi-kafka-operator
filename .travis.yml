@@ -1,6 +1,6 @@
 sudo: required
 # We need the systemd for the kubeadm and it's default from 16.04+
-dist: xenial
+dist: focal
 arch: s390x
 env:
   global:
@@ -8,7 +8,6 @@ env:
     - MINIKUBE_WANTUPDATENOTIFICATION=false
     - MINIKUBE_WANTREPORTERRORPROMPT=false
     - MINIKUBE_HOME=$HOME
-    - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
 
 before_install:
