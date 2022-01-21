@@ -4,7 +4,7 @@ export CURPATH=$PATH
 export S390X_JNI_JAR_DIR=$HOME/s390x_jni_jar
 export PREFIX=/usr/local
 
-if [ ! -d $S390X_JNI_JAR_DIR ]; then
+if [ ! -f $HOME/s390x_jni_jar/rocksdbjni-6.19.3.jar ]; then
 	printf -- "Building rocksdbjni jars \n"
 	#Install AdoptOpenJDK8 + OpenJ9 with Large heap
 	cd $HOME
