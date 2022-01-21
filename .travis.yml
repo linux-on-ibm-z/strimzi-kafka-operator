@@ -22,7 +22,6 @@ before_script:
 - mkdir -p $HOME/.kube $HOME/.minikube
 - touch $KUBECONFIG
 - sudo swapoff -a
-- sudo setenforce 0
 - sudo minikube start --profile=minikube --vm-driver=none --alsologtostderr --v=2 --extra-config=kubelet.cgroup-driver=systemd
 - minikube update-context --profile=minikube
 - "sudo chown -R travis: /home/travis/.minikube/"
