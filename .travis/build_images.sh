@@ -6,10 +6,6 @@ curl -sSL "https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6
 chmod a+x ~/.docker/cli-plugins/docker-buildx
 
 # Build Strimzi-kafka-operator binaries and docker images
-cd $HOME
-git clone -b travis_CI_s390x https://github.com/linux-on-ibm-z/strimzi-kafka-operator.git
-cd strimzi-kafka-operator/
-
 export DOCKER_TAG=latest
 export DOCKER_BUILDX=buildx
 export DOCKER_BUILD_ARGS="--platform linux/s390x --load"
