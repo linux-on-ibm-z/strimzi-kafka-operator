@@ -54,6 +54,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
 
     mkdir $HOME/.kube || true
     touch $HOME/.kube/config
+    grep cgroup /proc/filesystems
 
     export KUBECONFIG=$HOME/.kube/config
     # We can turn on network polices support by adding the following options --network-plugin=cni --cni=calico
