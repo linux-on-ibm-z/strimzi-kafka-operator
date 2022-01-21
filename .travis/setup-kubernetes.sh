@@ -57,7 +57,6 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     grep cgroup /proc/filesystems
 
     export KUBECONFIG=$HOME/.kube/config
-    sudo chown $(id -u):$(id -g) $HOME/.kube/config
     # We can turn on network polices support by adding the following options --network-plugin=cni --cni=calico
     # We have to allow trafic for ITS when NPs are turned on
     # We can allow NP after Strimzi#4092 which should fix some issues on STs side
@@ -66,7 +65,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     sudo systemctl restart docker
     minikube start --vm-driver=none --kubernetes-version=v1.23.1 \
       --extra-config=apiserver.authorization-mode=Node,RBAC \
-      --cpus=${MINIKUBE_CPU}
+      --extra-config=kubelet.cgroup-driver=systemd --cpus=${MINIKUBE_CPU}
     sudo systemctl status kubelet
 
     if [ $? -ne 0 ]
