@@ -7,7 +7,6 @@ env:
     - MINIKUBE_WANTUPDATENOTIFICATION=false
     - MINIKUBE_WANTREPORTERRORPROMPT=false
     - MINIKUBE_HOME=$HOME
-    - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
 
 before_install:
@@ -15,14 +14,14 @@ before_install:
 
 before_script:
 # Download kubectl, which is a requirement for using minikube.
-- curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.22.3/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+- curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.22.3/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/bin/
 # Download minikube.
-- curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.24.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+- curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.24.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/bin/
 - mkdir -p $HOME/.kube $HOME/.minikube
 - touch $KUBECONFIG
-- sudo -E minikube start --profile=minikube --vm-driver=none --extra-config=kubelet.cgroup-driver=systemd
+- minikube start --profile=minikube --vm-driver=none --extra-config=kubelet.cgroup-driver=systemd
 - minikube update-context --profile=minikube
-- "sudo chown -R travis: /home/travis/.minikube/"
+#- "sudo chown -R travis: /home/travis/.minikube/"
 #- eval "$(minikube docker-env --profile=minikube)" && export DOCKER_CLI='docker'
 
 script:
