@@ -63,7 +63,6 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     sudo apt-get install linux-image-$(uname -r) socat -y
     sudo systemctl enable docker.service
     sudo systemctl restart docker
-    sudo systemctl status kubelet
     minikube start --profile=minikube --vm-driver=none --kubernetes-version=v1.23.1 \
       --extra-config=apiserver.authorization-mode=Node,RBAC \
       --extra-config=kubelet.cgroup-driver=systemd --cpus=${MINIKUBE_CPU}
