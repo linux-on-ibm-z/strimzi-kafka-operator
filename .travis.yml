@@ -12,7 +12,7 @@ env:
 
 before_install:
 - sudo apt-get update
-- sudo apt-get -qq -y install conntrack docker.io socat selinux-basics selinux-policy-default auditd
+- sudo apt-get install -y conntrack docker.io socat selinux-basics selinux-policy-default
 
 before_script:
 # Download kubectl, which is a requirement for using minikube.
@@ -29,7 +29,7 @@ before_script:
 - sudo setenforce 0
 #- sudo minikube start --profile=minikube --vm-driver=none --alsologtostderr --v=2 --extra-config=kubelet.cgroup-driver=systemd --extra-config=kubeadm.ignore-preflight-errors=all
 #- minikube start --driver docker --cpus=4 --memory=4096 --base-image=kicbase/stable:v0.0.28 --kubernetes-version=v1.22.3
-- sudo -E minikube start --driver=none
+- sudo minikube start --driver=none
 - minikube update-context --profile=minikube
 
 - "sudo chown -R travis: /home/travis/.minikube/"
