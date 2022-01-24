@@ -2,56 +2,32 @@ dist: focal
 sudo: required
 language: java
 arch: s390x
-jdk:
-- openjdk11
 services:
 - docker
-cache:
-  directories:
-  - $HOME/.m2
 before_install:
-- if [ $(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p') -gt 1 ] ; then export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p'); export JAVA_VERSION=$JAVA_VERSION_BUILD; else export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2/p'); export JAVA_VERSION=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2.\3/p'); fi;
-- export M2_HOME=$HOME/apache-maven-3.8.2
-- export PATH=$M2_HOME/bin:$PATH
 - mkdir -vp ~/.docker/cli-plugins/
 - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6.1.linux-s390x" > ~/.docker/cli-plugins/docker-buildx
 - chmod a+x ~/.docker/cli-plugins/docker-buildx
 - sudo service docker restart
 - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-- "./.travis/install_prereqs.sh"
 - docker info
-- "./.travis/setup-kubernetes.sh"
-- gem install asciidoctor asciidoctor-pdf
-- "./.travis/install_yq.sh"
-- "./.travis/install_rocksdbjni.sh"
-- "./.travis/setup-helm.sh"
-- "./.travis/build_images.sh"
+- sudo apt-get install linux-image-$(uname -r) socat -y
+- sudo sysctl net.ipv6.conf.all.disable_ipv6=1
+- sudo sysctl net.ipv6.conf.default.disable_ipv6=1
+- sudo sysctl net.ipv6.conf.lo.disable_ipv6=1
+- sudo sysctl -p && sudo systemctl enable docker.service && sudo systemctl restart docker
+- curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+- sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+- sudo swapoff -a && sudo apt-get install -y kubelet kubeadm kubectl
+- sudo swapoff -a && sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+- mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+- sudo chown $(id -u):$(id -g) $HOME/.kube/config
+- sudo kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+- sudo kubectl taint nodes --all node-role.kubernetes.io/master- && sudo kubectl get nodes
+
 install:
-- mvn -q install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-before_script:
-- "./.travis/setup-kubernetes.sh"
-after_script:
-- "./.travis/build_postImages.sh"
-script:
-- "./.travis/build.sh"
-cache:
-  directories:
-  - "$HOME/.m2"
+- kubectl get pods --all-namespaces
 env:
   global:
-  - PULL_REQUEST=${TRAVIS_PULL_REQUEST}
-  - COMMIT=${TRAVIS_COMMIT::8}
-  - TAG=${TRAVIS_TAG:-latest}
-  - BRANCH=${TRAVIS_BRANCH:-master}
-  - DOCKER_ORG=strimzici
   - DOCKER_REGISTRY=docker.io
-  - TEST_CLUSTER=minikube
-  - TEST_KUBECTL_VERSION=v1.23.1
-  - TEST_NSENTER_VERSION=2.32
-  - TEST_HELM3_VERSION=v3.7.2
-  - TEST_MINIKUBE_VERSION=v1.24.0
-  - STRIMZI_DEFAULT_LOG_LEVEL=DEBUG
-  - MVN_ARGS="-q -Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2"
   - DOCKER_BUILD_ARGS="-q"
-  - secure: 4Y7PZWQEBGvGGyDyPYXY8ZbTWjD9O7kvrkKfXq0hfM7DmId7EfkGLXf6u/gp9/YWBW5cgl9svWjVwZmIHJq08MJ3x7FLyZz34++nnkSUbTkiUcPeSekO/RecALgkG/wh3WQZZwNTq6Fh61f2d1cn/2x9MwtXE1DjZIgTWOz/H8O4w/vEaxZYRCz/Flih87/QcFrQ9wooVf0if6r+UiFCSizgU+pxBgpO73Sg7x3uy3dB0ubzSpSThnoGevTAhfVzmoRO5FSKjGSF2/mvG14b5hUHZv3gm7Ch8D3crVco3Ima5SsD9V8jOK1jUmy6eVlrsuWPmahd7xoRJfUqavchct2tBMe44mgcbf/UG9+p1n0x/3I754mJLNAOT53mdPjoL/KX2yvHnVcZwq5R1nli3zJxdEyHMocB9Pj8v4ohCEfNf0Mwe78BfVbrqxpnoV7lvy1SF1sqqCVaYrghH5tMzaGC/aivZXu5iDidHBhuqtRm8MTR18RMa0r20nRh/zLG0HJuLQlNCRXoQUmpSwp7FSPvn+cILWSLdMEqabIda/ey8FgxkuBZ+zFVgqTppxTxBwaPQzvBdALSEe6lTyJwy4jnKtZFdpa4v1CRGjEAmewB2ZRfeTvpaeagxLOJgZlrEDHYLCl4TkSU1dny6jMXSpuEVjPE1ZnvGjcWVMb5Yr4= # DOCKER_USER
-  - secure: Xwy5PG+TlRkTsGyelG/d0N+aVUQKM8wa/um6LSbEBd0nUc6WRZ36BrP4FI71hdknCrr9/1oDYkMt2FD20F9fzJJeT9vPGl7pd3kufTiZvqKphYRhHrjRGOWIoQAMRrcQOKUKGu9mcaeXtstdNbcRMmBbztu5y+IDtPfC5qJol2eXFMhkT0eZ0gkSFDKMJNzup35HbAnVu6KlqOVNxDHE5VhaMKl3BaLIO6GuqNwaRvG8nf/zikS+ZoVHa/fGfIOqPBjhHkyGTgrf4X0/QLPCO5mEzR97WGh8J3fKYXR9vNGo9ff/d3yfyFKkqkp0bJHruWMghTuFsJDAnQAo5dhA85f8zd9COTVLkYBxW0Aibs4i0pbVg0JlgfLhT5dyrPqzq8Xp00AvH23Oqbn5me4WL2kLsB2R+PM8s+IyDZO+ZfLM2VHPt5ogRCgmMEzfSibvzKz1p0s3z/sw+Qr/chRe0qbfh6u4XaLvUnXLza5YkmILkRsmSDrZQYDSPYutvDqQlno/h02um7h0kNJQfIwRi/pVDGkTzpBkWYohkL6a71CW4aXIRgI+UOmY1+383FStDN6sfjInJ7nerG+cWzEyDwBxZ7e50R3CHjunt6StKueh4HUrNQfOIFKllhTOoiFNPdX/xQYjfdm4szTtISMMsiz6ht81/G1B7+/d2TNTa/U= # DOCKER_PASS
