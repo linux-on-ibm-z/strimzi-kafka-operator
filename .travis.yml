@@ -9,7 +9,7 @@ before_install:
 - chmod a+x ~/.docker/cli-plugins/docker-buildx
 - sudo service docker restart
 - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-- docker info
+- docker info && sudo apt-get install linux-image-$(uname -r) socat -y
 - sudo sysctl net.ipv6.conf.all.disable_ipv6=1
 - sudo sysctl net.ipv6.conf.default.disable_ipv6=1
 - sudo sysctl net.ipv6.conf.lo.disable_ipv6=1
