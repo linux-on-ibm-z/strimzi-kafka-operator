@@ -1,6 +1,5 @@
-dist: focal
+dist: xenial
 sudo: required
-language: java
 arch: s390x
 services:
 - docker
