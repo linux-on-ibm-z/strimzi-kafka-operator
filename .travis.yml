@@ -31,6 +31,7 @@ before_install:
 - sudo kubectl taint nodes --all node-role.kubernetes.io/master- && sudo kubectl get nodes
 
 install:
+# test
 - kubectl get pods --all-namespaces
 env:
   global:
