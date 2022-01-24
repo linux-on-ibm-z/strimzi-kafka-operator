@@ -55,7 +55,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     mkdir $HOME/.kube || true
     touch $HOME/.kube/config
 
-    docker run -d -p 5000:5000 registry:2
+    docker run -d -p 5000:5000 ibmcom/registry-s390x:2.6.2.5
 
     export KUBECONFIG=$HOME/.kube/config
     # We can turn on network polices support by adding the following options --network-plugin=cni --cni=calico
