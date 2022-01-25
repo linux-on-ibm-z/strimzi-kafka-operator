@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+if [ ! -f $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.19.3/rocksdbjni-6.19.3.jar ]; then
+
 #Install AdoptOpenJDK8 + OpenJ9 with Large heap
 export CURPATH=$PATH
 export S390X_JNI_JAR_DIR=$HOME/s390x_jni_jar
@@ -47,14 +49,19 @@ sed -i "s/ .*$//g" $S390X_JNI_JAR_DIR/rocksdbjni-6.19.3.jar.sha1
 
 export PATH=$CURPATH
 
+fi
+
 # Install and setup Maven
 export PATH=$CURPATH
 cd $HOME
 wget https://archive.apache.org/dist/maven/maven-3/3.8.2/binaries/apache-maven-3.8.2-bin.tar.gz
 tar -zxf apache-maven-3.8.2-bin.tar.gz
 export PATH=$HOME/apache-maven-3.8.2/bin:$PATH
+mvn --version
 
+if [ ! -f $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.19.3/rocksdbjni-6.19.3.jar ]; then
 # Put locally built jni jars in the local maven repository
 mkdir -p $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.19.3
 cp -f $S390X_JNI_JAR_DIR/rocksdbjni-6.19.3.jar $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.19.3/rocksdbjni-6.19.3.jar
 cp -f $S390X_JNI_JAR_DIR/rocksdbjni-6.19.3.jar.sha1 $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.19.3/rocksdbjni-6.19.3.jar.sha1
+fi

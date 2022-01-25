@@ -13,12 +13,16 @@ docker tag local/kaniko-project/executor:v1.7.0 gcr.io/kaniko-project/executor:v
 
 # Build Strimzi-kafka-operator binaries and docker images
 cd $HOME
-git clone -b s390x_tci https://github.com/linux-on-ibm-z/strimzi-kafka-operator.git 
+git https://github.com/strimzi/strimzi-kafka-operator.git 
 cd strimzi-kafka-operator/
 
 export DOCKER_TAG=latest
 export DOCKER_BUILDX=buildx
 export DOCKER_BUILD_ARGS="--platform linux/s390x --load"
 make clean
-make MVN_ARGS='-q -DskipTests -DskipITs' java_install
-make MVN_ARGS='-q -DskipTests -DskipITs' docker_build
+echo "Building java artifacts"
+make MVN_ARGS='-q -DskipTests -Dmaven.javadoc.skip=true' java_install
+echo "Building docker images"
+make MVN_ARGS='-q -DskipTests -Dmaven.javadoc.skip=true' docker_build
+echo "Saving docker images as tar balls"
+make docker_save
