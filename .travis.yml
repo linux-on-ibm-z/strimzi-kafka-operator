@@ -9,6 +9,22 @@ services:
 cache:
   directories:
   - $HOME/.m2
+jobs:
+  include:
+    - stage: "Build Strimzi Images"
+      script: "./.travis/build_kaniko_build.sh"
+      workspaces:
+        create:
+          name: strimzi-image-tarballs
+          paths:
+            - kaniko-executor.tar.gz
+    - stage: "Running system tests"
+      git:
+        clone: false
+      workspaces:
+        use:
+          - strimzi-image-tarballs
+      script: "./.travis/build_kaniko_test.sh"
 before_install:
 - if [ $(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p') -gt 1 ] ; then export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p'); export JAVA_VERSION=$JAVA_VERSION_BUILD; else export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2/p'); export JAVA_VERSION=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2.\3/p'); fi;
 - export M2_HOME=$HOME/apache-maven-3.8.2
@@ -21,17 +37,17 @@ before_install:
 - "./.travis/install_prereqs.sh"
 - gem install asciidoctor asciidoctor-pdf
 - "./.travis/install_yq.sh"
-- "./.travis/install_rocksdbjni.sh"
+#- "./.travis/install_rocksdbjni.sh"
 - "./.travis/setup-helm.sh"
-install:
+#install:
 #- mvn -q install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-- "./.travis/build_images.sh"
+#- "./.travis/build_images.sh"
 #before_script:
 #- "./.travis/setup-kubernetes.sh"
-after_script:
-- "./.travis/build_postImages.sh"
-script:
-- "./.travis/build.sh"
+#after_script:
+#- "./.travis/build_postImages.sh"
+#script:
+#- "./.travis/build.sh"
 cache:
   directories:
   - "$HOME/.m2"
