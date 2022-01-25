@@ -1,6 +1,8 @@
 dist: bionic
 sudo: required
 arch: s390x
+jdk:
+- openjdk11
 services:
 - docker
 before_install:
