@@ -13,7 +13,7 @@ docker tag local/kaniko-project/executor:v1.7.0 gcr.io/kaniko-project/executor:v
 
 # Build Strimzi-kafka-operator binaries and docker images
 cd $HOME
-git https://github.com/strimzi/strimzi-kafka-operator.git 
+git clone https://github.com/strimzi/strimzi-kafka-operator.git 
 cd strimzi-kafka-operator/
 
 export DOCKER_TAG=latest
