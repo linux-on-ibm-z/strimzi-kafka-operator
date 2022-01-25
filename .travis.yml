@@ -10,8 +10,30 @@ before_install:
 - sudo service docker restart
 - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 - docker info
+- sudo apt-get install linux-image-$(uname -r) socat -y
+- sudo sysctl net.ipv6.conf.all.disable_ipv6=1
+- sudo sysctl net.ipv6.conf.default.disable_ipv6=1
+- sudo sysctl net.ipv6.conf.lo.disable_ipv6=1
+- sudo sysctl -p
+- sudo systemctl enable docker.service
+- sudo systemctl restart docker
+- curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+- sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+- sudo swapoff -a 
+- sudo apt-get install -y kubelet kubeadm kubectl
+- sudo kubeadm reset
+- sudo kubeadm init phase certs all
+- sudo kubeadm init phase kubeconfig all
+- sudo kubeadm init phase control-plane all --pod-network-cidr=10.244.0.0/16
+- sudo kubeadm init --v=1 --skip-phases=certs,kubeconfig,control-plane --ignore-preflight-errors=all --pod-network-cidr=10.244.0.0/16
+#- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --v=5
+- mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+- sudo chown $(id -u):$(id -g) $HOME/.kube/config
+- sudo kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+- sudo kubectl taint nodes --all node-role.kubernetes.io/master- && sudo kubectl get nodes
+
 install:
-- docker info
+- kubectl get pods --all-namespaces
 env:
   global:
   - DOCKER_REGISTRY=docker.io
