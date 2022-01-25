@@ -26,3 +26,4 @@ echo "Building docker images"
 make MVN_ARGS='-q -DskipTests -Dmaven.javadoc.skip=true' docker_build
 echo "Saving docker images as tar balls"
 make docker_save
+
