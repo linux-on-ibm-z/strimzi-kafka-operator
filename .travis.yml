@@ -19,8 +19,6 @@ jobs:
           paths:
             - kaniko-executor.tar.gz
     - stage: "Running system tests"
-      git:
-        clone: false
       workspaces:
         use:
           - strimzi-image-tarballs
@@ -40,7 +38,7 @@ before_install:
 - "./.travis/install_maven.sh"
 #- "./.travis/install_rocksdbjni.sh"
 - "./.travis/setup-helm.sh"
-#install:
+install: true
 #- mvn -q install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 #- "./.travis/build_images.sh"
 #before_script:
