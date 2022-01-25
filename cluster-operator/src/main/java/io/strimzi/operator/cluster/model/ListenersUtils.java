@@ -4,6 +4,7 @@
  */
 package io.strimzi.operator.cluster.model;
 
+import io.strimzi.api.kafka.model.listener.KafkaListenerAuthenticationCustom;
 import io.strimzi.api.kafka.model.listener.KafkaListenerAuthenticationOAuth;
 import io.strimzi.api.kafka.model.listener.NodeAddressType;
 import io.strimzi.api.kafka.model.listener.arraylistener.GenericKafkaListener;
@@ -43,6 +44,13 @@ public class ListenersUtils {
             return false;
 
         return KafkaListenerAuthenticationOAuth.TYPE_OAUTH.equals(listener.getAuth().getType());
+    }
+
+    public static boolean isListenerWithCustomAuth(GenericKafkaListener listener) {
+        if (listener.getAuth() == null || listener.getAuth().getType() == null)
+            return false;
+
+        return KafkaListenerAuthenticationCustom.TYPE_CUSTOM.equals(listener.getAuth().getType());
     }
 
     /**
@@ -605,6 +613,18 @@ public class ListenersUtils {
         } else {
             return null;
         }
+    }
+
+    /**
+     * Check whether we should skip the creation of the bootstrap service.
+     *
+     * @param listener Listener for which the createBootstrapService should be created or not.
+     * @return         Whether we should create the Load Balancer Service for the Bootstrap Service.
+     */
+    public static Boolean skipCreateBootstrapService(GenericKafkaListener listener) {
+        return KafkaListenerType.LOADBALANCER == listener.getType()
+                && listener.getConfiguration() != null
+                && !listener.getConfiguration().getCreateBootstrapService();
     }
 
     /**

@@ -5,7 +5,6 @@
 package io.strimzi.operator.cluster.model;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.fabric8.kubernetes.api.model.Affinity;
@@ -79,6 +78,7 @@ import io.strimzi.api.kafka.model.status.Condition;
 import io.strimzi.api.kafka.model.storage.JbodStorage;
 import io.strimzi.api.kafka.model.storage.PersistentClaimStorage;
 import io.strimzi.api.kafka.model.storage.PersistentClaimStorageOverride;
+import io.strimzi.api.kafka.model.storage.SingleVolumeStorage;
 import io.strimzi.api.kafka.model.storage.Storage;
 import io.strimzi.api.kafka.model.template.IpFamily;
 import io.strimzi.api.kafka.model.template.IpFamilyPolicy;
@@ -189,9 +189,6 @@ public abstract class AbstractModel {
             PROXY_ENV_VARS = Collections.emptyList();
         }
     }
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final TypeReference<Map<String, Object>> POD_TYPE = new TypeReference<>() { };
 
     protected final Reconciliation reconciliation;
     protected final String cluster;
@@ -876,6 +873,38 @@ public abstract class AbstractModel {
     }
 
     /**
+     * Creates list of PersistentVolumeClaims required by stateful deployments (Kafka and Zoo). This method calls itself
+     * recursively to handle volumes inside JBOD storage. When it calls itself to handle the volumes inside JBOD array,
+     * the {@code jbod} flag should be set to {@code true}. When called from outside, it should be set to {@code false}.
+     *
+     * @param storage   The storage configuration
+     * @param jbod      Indicator whether the {@code storage} is part of JBOD array or not
+     *
+     * @return          List with Persistent Volume Claims
+     */
+    protected List<PersistentVolumeClaim> createPersistentVolumeClaims(Storage storage, boolean jbod)   {
+        List<PersistentVolumeClaim> pvcs = new ArrayList<>();
+
+        if (storage != null) {
+            if (storage instanceof PersistentClaimStorage) {
+                PersistentClaimStorage persistentStorage = (PersistentClaimStorage) storage;
+                String pvcBaseName = VolumeUtils.createVolumePrefix(persistentStorage.getId(), jbod) + "-" + name;
+
+                for (int i = 0; i < replicas; i++) {
+                    pvcs.add(createPersistentVolumeClaim(i, pvcBaseName + "-" + i, persistentStorage));
+                }
+            } else if (storage instanceof JbodStorage) {
+                for (SingleVolumeStorage volume : ((JbodStorage) storage).getVolumes()) {
+                    // it's called recursively for setting the information from the current volume
+                    pvcs.addAll(createPersistentVolumeClaims(volume, true));
+                }
+            }
+        }
+
+        return pvcs;
+    }
+
+    /**
      * createPersistentVolumeClaim is called uniquely for each ordinal (Broker ID) of a stateful set
      *
      * @param ordinalId the ordinal of the pod/broker for which the persistent volume claim is being created
@@ -948,6 +977,10 @@ public abstract class AbstractModel {
 
     protected Secret createSecret(String name, Map<String, String> data) {
         return ModelUtils.createSecret(name, namespace, labels, createOwnerReference(), data, emptyMap(), emptyMap());
+    }
+
+    protected Secret createSecret(String name, Map<String, String> data, Map<String, String> customAnnotations) {
+        return ModelUtils.createSecret(name, namespace, labels, createOwnerReference(), data, customAnnotations, emptyMap());
     }
 
     protected Secret createJmxSecret(String name, Map<String, String> data) {
@@ -1134,7 +1167,7 @@ public abstract class AbstractModel {
                     imagePullSecrets,
                     isOpenShift);
 
-            pods.add(MAPPER.convertValue(pod, POD_TYPE));
+            pods.add(PodSetUtils.podToMap(pod));
         }
 
         return new StrimziPodSetBuilder()

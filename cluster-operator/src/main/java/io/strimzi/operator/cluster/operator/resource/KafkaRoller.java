@@ -34,7 +34,6 @@ import io.fabric8.kubernetes.api.model.ContainerStateWaiting;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Secret;
-import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.strimzi.operator.cluster.model.KafkaCluster;
 import io.strimzi.operator.cluster.model.KafkaVersion;
@@ -44,7 +43,6 @@ import io.strimzi.operator.common.DefaultAdminClientProvider;
 import io.strimzi.operator.common.ReconciliationLogger;
 import io.strimzi.operator.common.Reconciliation;
 import io.strimzi.operator.common.Util;
-import io.strimzi.operator.common.model.Labels;
 import io.strimzi.operator.common.operator.resource.PodOperator;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -127,20 +125,20 @@ public class KafkaRoller {
 
     public KafkaRoller(Reconciliation reconciliation, Vertx vertx, PodOperator podOperations,
                        long pollingIntervalMs, long operationTimeoutMs, Supplier<BackOff> backOffSupplier,
-                       StatefulSet sts, Secret clusterCaCertSecret, Secret coKeySecret,
+                       int replicas, Secret clusterCaCertSecret, Secret coKeySecret,
                        String kafkaConfig, String kafkaLogging, KafkaVersion kafkaVersion, boolean allowReconfiguration) {
         this(reconciliation, vertx, podOperations, pollingIntervalMs, operationTimeoutMs, backOffSupplier,
-                sts, clusterCaCertSecret, coKeySecret, new DefaultAdminClientProvider(), kafkaConfig, kafkaLogging, kafkaVersion, allowReconfiguration);
+                replicas, clusterCaCertSecret, coKeySecret, new DefaultAdminClientProvider(), kafkaConfig, kafkaLogging, kafkaVersion, allowReconfiguration);
     }
 
     public KafkaRoller(Reconciliation reconciliation, Vertx vertx, PodOperator podOperations,
                        long pollingIntervalMs, long operationTimeoutMs, Supplier<BackOff> backOffSupplier,
-                       StatefulSet sts, Secret clusterCaCertSecret, Secret coKeySecret,
+                       int replicas, Secret clusterCaCertSecret, Secret coKeySecret,
                        AdminClientProvider adminClientProvider,
                        String kafkaConfig, String kafkaLogging, KafkaVersion kafkaVersion, boolean allowReconfiguration) {
-        this.namespace = sts.getMetadata().getNamespace();
-        this.cluster = Labels.cluster(sts);
-        this.numPods = sts.getSpec().getReplicas();
+        this.namespace = reconciliation.namespace();
+        this.cluster = reconciliation.name();
+        this.numPods = replicas;
         this.backoffSupplier = backOffSupplier;
         this.clusterCaCertSecret = clusterCaCertSecret;
         this.coKeySecret = coKeySecret;
@@ -457,7 +455,9 @@ public class KafkaRoller {
                 "PodScheduled".equals(ps.getType())
                         && "Unschedulable".equals(ps.getReason())
                         && "False".equals(ps.getStatus()));
-        if (podStuck && !reasonToRestartPod.contains("Pod has old generation")) {
+        if (podStuck
+                && !reasonToRestartPod.contains("Pod has old generation")   // "Pod has old generation" is used with StatefulSets
+                && !reasonToRestartPod.contains("Pod has old revision")) {  // "Pod has old revision" is used with PodSets
             // If the pod is unschedulable then deleting it, or trying to open an Admin client to it will make no difference
             // Treat this as fatal because if it's not possible to schedule one pod then it's likely that proceeding
             // and deleting a different pod in the meantime will likely result in another unschedulable pod.

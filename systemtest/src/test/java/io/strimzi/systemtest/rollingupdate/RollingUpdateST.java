@@ -176,6 +176,7 @@ class RollingUpdateST extends AbstractST {
         final LabelSelector kafkaSelector = KafkaResource.getLabelSelector(clusterName, KafkaResources.kafkaStatefulSetName(clusterName));
 
         resourceManager.createResource(extensionContext, KafkaTemplates.kafkaPersistent(clusterName, 3, 3).build());
+
         resourceManager.createResource(extensionContext, KafkaTopicTemplates.topic(clusterName, topicName, 2, 3).build());
 
         KafkaUser user = KafkaUserTemplates.tlsUser(clusterName, userName).build();

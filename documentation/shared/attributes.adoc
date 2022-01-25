@@ -25,16 +25,16 @@
 :KubernetesVersion: 1.16 and later
 
 // Kafka upgrade attributes used in kafka upgrades section
-:DefaultKafkaVersion: 3.0.0
-:KafkaVersionLower: 2.8.0
-:KafkaVersionHigher: 3.0.0
+:DefaultKafkaVersion: 3.1.0
+:KafkaVersionLower: 3.0.0
+:KafkaVersionHigher: 3.1.0
 :ExampleImageTagUpgrades: quay.io/strimzi/kafka:{ProductVersion}-kafka-{KafkaVersionHigher}
 
 //log message format version and inter-broker protocol version
-:LogMsgVersLower: 2.8
-:LogMsgVersHigher: 3.0
-:InterBrokVersLower: 2.8
-:InterBrokVersHigher: 3.0
+:LogMsgVersLower: 3.0
+:LogMsgVersHigher: 3.1
+:InterBrokVersLower: 3.0
+:InterBrokVersHigher: 3.1
 
 // Source and download links
 :ReleaseDownload: https://github.com/strimzi/strimzi-kafka-operator/releases[GitHub^]
@@ -85,11 +85,12 @@
 :NginxIngressController: link:https://github.com/kubernetes/ingress-nginx[NGINX Ingress Controller for Kubernetes^]
 :NginxIngressControllerTLSPassthrough: link:https://kubernetes.github.io/ingress-nginx/user-guide/tls/#ssl-passthrough[TLS passthrough documentation]
 :KubernetesExternalDNS: link:https://github.com/kubernetes-incubator/external-dns[External DNS^]
-:ApacheKafkaBrokerConfig: link:http://kafka.apache.org/documentation/#brokerconfigs[Apache Kafka documentation^]
-:ApacheKafkaConnectConfig: link:http://kafka.apache.org/documentation/#connectconfigs[Apache Kafka documentation^]
+:ApacheKafkaBrokerConfig: link:https://kafka.apache.org/documentation/#brokerconfigs[Apache Kafka documentation^]
+:ApacheKafkaConnectConfig: link:https://kafka.apache.org/documentation/#connectconfigs[Apache Kafka documentation^]
 :ApacheZookeeperConfig: link:https://zookeeper.apache.org/doc/r3.5.8/zookeeperAdmin.html[ZooKeeper documentation^]
-:ApacheKafkaConsumerConfig: link:http://kafka.apache.org/documentation/#consumerconfigs[Apache Kafka configuration documentation for consumers^]
-:ApacheKafkaProducerConfig: link:http://kafka.apache.org/documentation/#producerconfigs[Apache Kafka configuration documentation for producers^]
+:ApacheKafkaConnectAPI: link:https://kafka.apache.org/documentation#connect_rest[Apache Kafka Connect API documentation^]
+:ApacheKafkaConsumerConfig: link:https://kafka.apache.org/documentation/#consumerconfigs[Apache Kafka configuration documentation for consumers^]
+:ApacheKafkaProducerConfig: link:https://kafka.apache.org/documentation/#producerconfigs[Apache Kafka configuration documentation for producers^]
 :ApacheKafkaDownload: link:http://kafka.apache.org/[Apache Kafka download^]
 :ApacheLoggers: link:https://logging.apache.org/[Apache logging services^]
 :CruiseControlProject: https://github.com/linkedin/cruise-control[Cruise Control^]

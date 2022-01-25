@@ -39,8 +39,6 @@ import io.strimzi.api.kafka.model.Probe;
 import io.strimzi.api.kafka.model.ProbeBuilder;
 import io.strimzi.api.kafka.model.ZookeeperClusterSpec;
 import io.strimzi.api.kafka.model.status.Condition;
-import io.strimzi.api.kafka.model.storage.EphemeralStorage;
-import io.strimzi.api.kafka.model.storage.PersistentClaimStorage;
 import io.strimzi.api.kafka.model.storage.Storage;
 import io.strimzi.api.kafka.model.template.ZookeeperClusterTemplate;
 import io.strimzi.certs.CertAndKey;
@@ -517,8 +515,8 @@ public class ZookeeperCluster extends AbstractModel {
         return createStatefulSet(
                 Collections.singletonMap(ANNO_STRIMZI_IO_STORAGE, ModelUtils.encodeStorageToJson(storage)),
                 Collections.emptyMap(),
-                getVolumes(isOpenShift),
-                getVolumeClaims(),
+                getStatefulSetVolumes(isOpenShift),
+                getPersistentVolumeClaimTemplates(),
                 getMergedAffinity(),
                 getInitContainers(imagePullPolicy),
                 getContainers(imagePullPolicy),
@@ -548,7 +546,7 @@ public class ZookeeperCluster extends AbstractModel {
             replicas,
             Collections.singletonMap(ANNO_STRIMZI_IO_STORAGE, ModelUtils.encodeStorageToJson(storage)),
             podAnnotations,
-            podName -> getPodVolumes(podName, isOpenShift),
+            podName -> getPodSetVolumes(podName, isOpenShift),
             getMergedAffinity(),
             getInitContainers(imagePullPolicy),
             getContainers(imagePullPolicy),
@@ -578,9 +576,10 @@ public class ZookeeperCluster extends AbstractModel {
      * internal communication with Kafka.
      * It also contains the related Zookeeper nodes private keys.
      *
+     * @param clusterCa The CA for cluster certificates
      * @return The generated Secret.
      */
-    public Secret generateNodesSecret() {
+    public Secret generateNodesSecret(ClusterCa clusterCa) {
 
         Map<String, String> data = new HashMap<>(replicas * 4);
         for (int i = 0; i < replicas; i++) {
@@ -590,7 +589,9 @@ public class ZookeeperCluster extends AbstractModel {
             data.put(ZookeeperCluster.zookeeperPodName(cluster, i) + ".p12", cert.keyStoreAsBase64String());
             data.put(ZookeeperCluster.zookeeperPodName(cluster, i) + ".password", cert.storePasswordAsBase64String());
         }
-        return createSecret(ZookeeperCluster.nodesSecretName(cluster), data);
+
+        return createSecret(ZookeeperCluster.nodesSecretName(cluster), data,
+                Collections.singletonMap(clusterCa.caCertGenerationAnnotation(), String.valueOf(clusterCa.certGeneration())));
     }
 
     @Override
@@ -674,13 +675,16 @@ public class ZookeeperCluster extends AbstractModel {
         return portList;
     }
 
-    private List<Volume> getVolumes(boolean isOpenShift) {
-        List<Volume> volumeList = new ArrayList<>(5);
-
-        if (storage instanceof EphemeralStorage) {
-            String sizeLimit = ((EphemeralStorage) storage).getSizeLimit();
-            volumeList.add(VolumeUtils.createEmptyDirVolume(VOLUME_NAME, sizeLimit, null));
-        }
+    /**
+     * Generates list of non-data volumes used by ZooKeeper Pods. This includes tmp volumes, mounted secrets and config
+     * maps.
+     *
+     * @param isOpenShift   Indicates whether we are on OpenShift or not
+     *
+     * @return              List of nondata volumes used by the ZooKeeper pods
+     */
+    private List<Volume> getNonDataVolumes(boolean isOpenShift) {
+        List<Volume> volumeList = new ArrayList<>(4);
 
         volumeList.add(createTempDirVolume());
         volumeList.add(VolumeUtils.createConfigMapVolume(logAndMetricsConfigVolumeName, ancillaryConfigMapName));
@@ -690,53 +694,60 @@ public class ZookeeperCluster extends AbstractModel {
         return volumeList;
     }
 
-    // StatefulSet automatically adds the PVCs from PVC template to volumes. For pods we need to add them in the operator.
+    /**
+     * Generates a list of volumes used by StatefulSet. For StatefulSet, it needs to include only ephemeral data
+     * volumes. Persistent claim volumes are generated directly by StatefulSet.
+     *
+     * @param isOpenShift   Flag whether we are on OpenShift or not
+     *
+     * @return              List of volumes to be included in the StatefulSet pod template
+     */
+    private List<Volume> getStatefulSetVolumes(boolean isOpenShift) {
+        List<Volume> volumeList = new ArrayList<>(5);
+
+        volumeList.addAll(VolumeUtils.createStatefulSetVolumes(storage, false));
+        volumeList.addAll(getNonDataVolumes(isOpenShift));
+
+        return volumeList;
+    }
 
     /**
-     * StatefulSets automatically add the PVCs they generate to the pod template as volumes. For StrimziPodSet, we need
-     * to generate these on our own using this method.
+     * Generates a list of volumes used by PodSets. For StrimziPodSet, it needs to include also all persistent claim
+     * volumes which StatefulSet would generate on its own.
      *
      * @param podName       Name of the pod used to name the volumes
      * @param isOpenShift   Flag whether we are on OpenShift or not
      *
      * @return              List of volumes to be included in the StrimziPodSet pod
      */
-    private List<Volume> getPodVolumes(String podName, boolean isOpenShift) {
-        if (storage instanceof PersistentClaimStorage) {
-            // Persistent Storage needs to be added
-            List<Volume> volumeList = new ArrayList<>(6);
-            volumeList.add(VolumeUtils.createPvcVolume(VOLUME_NAME, "data-" + podName));
-            volumeList.addAll(getVolumes(isOpenShift));
+    private List<Volume> getPodSetVolumes(String podName, boolean isOpenShift) {
+        List<Volume> volumeList = new ArrayList<>(5);
 
-            return volumeList;
-        } else {
-            // For Ephemeral storage, we do not need to add any additional volumes
-            return getVolumes(isOpenShift);
-        }
+        volumeList.addAll(VolumeUtils.createPodSetVolumes(podName, storage, false));
+        volumeList.addAll(getNonDataVolumes(isOpenShift));
+
+        return volumeList;
     }
 
-    /* test */ List<PersistentVolumeClaim> getVolumeClaims() {
-        List<PersistentVolumeClaim> pvcList = new ArrayList<>(1);
-        if (storage instanceof PersistentClaimStorage) {
-            pvcList.add(VolumeUtils.createPersistentVolumeClaimTemplate(VOLUME_NAME, (PersistentClaimStorage) storage));
-        }
-        return pvcList;
+    /**
+     * Creates a list of Persistent Volume Claim templates for use in StatefulSets
+     *
+     * @return  List of Persistent Volume Claim Templates
+     */
+    /* test */ List<PersistentVolumeClaim> getPersistentVolumeClaimTemplates() {
+        return VolumeUtils.createPersistentVolumeClaimTemplates(storage, false);
     }
 
     public List<PersistentVolumeClaim> generatePersistentVolumeClaims() {
-        List<PersistentVolumeClaim> pvcList = new ArrayList<>(replicas);
-        if (storage instanceof PersistentClaimStorage) {
-            for (int i = 0; i < replicas; i++) {
-                pvcList.add(createPersistentVolumeClaim(i, "data-" + name + "-" + i, (PersistentClaimStorage) storage));
-            }
-        }
-        return pvcList;
+        return createPersistentVolumeClaims(storage, false);
     }
 
     private List<VolumeMount> getVolumeMounts() {
         List<VolumeMount> volumeMountList = new ArrayList<>(5);
 
         volumeMountList.add(createTempDirVolumeMount());
+        // ZooKeeper uses mount path which is different from the one used by Kafka.
+        // As a result it cannot use VolumeUtils.getVolumeMounts and creates the volume mount directly
         volumeMountList.add(VolumeUtils.createVolumeMount(VOLUME_NAME, mountPath));
         volumeMountList.add(VolumeUtils.createVolumeMount(logAndMetricsConfigVolumeName, logAndMetricsConfigMountPath));
         volumeMountList.add(VolumeUtils.createVolumeMount(ZOOKEEPER_NODE_CERTIFICATES_VOLUME_NAME, ZOOKEEPER_NODE_CERTIFICATES_VOLUME_MOUNT));

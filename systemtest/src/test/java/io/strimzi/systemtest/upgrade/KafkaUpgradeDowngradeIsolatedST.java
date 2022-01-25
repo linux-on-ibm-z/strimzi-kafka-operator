@@ -20,6 +20,7 @@ import io.strimzi.systemtest.utils.kubeUtils.objects.PodUtils;
 import io.strimzi.test.annotations.IsolatedSuite;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -105,26 +106,13 @@ public class KafkaUpgradeDowngradeIsolatedST extends AbstractUpgradeST {
         String consumerName = clusterName + "-consumer";
 
         String initLogMsgFormat = sortedVersions.get(0).messageVersion();
-
-        if (initLogMsgFormat.charAt(2) + 1 >= sortedVersions.get(sortedVersions.size() - 1).messageVersion().charAt(2)) {
-            StringBuilder tmp = new StringBuilder(initLogMsgFormat);
-            tmp.setCharAt(2, (char) (initLogMsgFormat.charAt(2) - 1));
-            initLogMsgFormat = tmp.toString();
-        }
-
-        String interBrokerProtocol = sortedVersions.get(0).protocolVersion();
-
-        if (interBrokerProtocol.charAt(2) + 1 >= sortedVersions.get(sortedVersions.size() - 1).messageVersion().charAt(2)) {
-            StringBuilder tmp = new StringBuilder(interBrokerProtocol);
-            tmp.setCharAt(2, (char) (interBrokerProtocol.charAt(2) - 1));
-            interBrokerProtocol = tmp.toString();
-        }
+        String initInterBrokerProtocol = sortedVersions.get(0).protocolVersion();
 
         for (int x = sortedVersions.size() - 1; x > 0; x--) {
             TestKafkaVersion initialVersion = sortedVersions.get(x);
             TestKafkaVersion newVersion = sortedVersions.get(x - 1);
 
-            runVersionChange(initialVersion, newVersion, producerName, consumerName, initLogMsgFormat, interBrokerProtocol, 3, 3, testContext);
+            runVersionChange(initialVersion, newVersion, producerName, consumerName, initLogMsgFormat, initInterBrokerProtocol, 3, 3, testContext);
         }
 
         // ##############################
@@ -153,6 +141,12 @@ public class KafkaUpgradeDowngradeIsolatedST extends AbstractUpgradeST {
         // ##############################
         ClientUtils.waitTillContinuousClientsFinish(producerName, consumerName, INFRA_NAMESPACE, continuousClientsMessageCount);
         // ##############################
+    }
+
+    @BeforeAll
+    void setupEnvironment() {
+        clusterOperator.unInstall();
+        clusterOperator.defaultInstallation().createInstallation().runInstallation();
     }
 
     @SuppressWarnings({"checkstyle:MethodLength"})
