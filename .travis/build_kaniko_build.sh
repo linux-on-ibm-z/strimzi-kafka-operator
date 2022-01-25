@@ -11,3 +11,4 @@ docker tag gcr.io/kaniko-project/executor:76624697df879f7c3e3348f22b8c986071af48
 docker save --output kaniko-executor.tar gcr.io/kaniko-project/executor:v1.7.0
 docker load --input kaniko-executor.tar
 docker run --rm gcr.io/kaniko-project/executor:v1.7.0 version
+mv kaniko-executor.tar kaniko-executor

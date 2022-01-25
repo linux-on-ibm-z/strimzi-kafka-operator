@@ -2,7 +2,9 @@
 
 export PATH=$HOME/apache-maven-3.8.2/bin:$PATH
 
-find . -name '*kaniko-executor.tar*'
+find . -name '*kaniko-executor*'
+
+mv kaniko-executor kaniko-executor.tar
 
 docker load --input kaniko-executor.tar
 
