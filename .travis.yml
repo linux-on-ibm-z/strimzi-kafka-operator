@@ -40,5 +40,17 @@ install:
 - kubectl get pods --all-namespaces
 env:
   global:
+  - PULL_REQUEST=${TRAVIS_PULL_REQUEST}
+  - COMMIT=${TRAVIS_COMMIT::8}
+  - TAG=${TRAVIS_TAG:-latest}
+  - BRANCH=${TRAVIS_BRANCH:-master}
+  - DOCKER_ORG=strimzici
   - DOCKER_REGISTRY=docker.io
+  - TEST_CLUSTER=minikube
+  - TEST_KUBECTL_VERSION=v1.23.1
+  - TEST_NSENTER_VERSION=2.32
+  - TEST_HELM3_VERSION=v3.7.2
+  - TEST_MINIKUBE_VERSION=v1.24.0
+  - STRIMZI_DEFAULT_LOG_LEVEL=DEBUG
+  - MVN_ARGS="-q -Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2"
   - DOCKER_BUILD_ARGS="-q"
