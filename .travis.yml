@@ -17,7 +17,7 @@ jobs:
         create:
           name: strimzi-image-tarballs
           paths:
-            - kaniko-executor.tar.gz
+            - kaniko-executor.tar
     - stage: "Running system tests"
       workspaces:
         use:
