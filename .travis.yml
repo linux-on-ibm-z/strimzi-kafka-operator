@@ -26,7 +26,7 @@ before_install:
 - sudo kubeadm init phase kubeconfig all
 - sudo kubeadm init phase control-plane all --pod-network-cidr=10.244.0.0/16
 - sudo kubeadm init --v=1 --skip-phases=certs,kubeconfig,control-plane --ignore-preflight-errors=all --pod-network-cidr=10.244.0.0/16
-#- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --v=5
+- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --v=5
 - mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 - sudo chown $(id -u):$(id -g) $HOME/.kube/config
 - sudo kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
