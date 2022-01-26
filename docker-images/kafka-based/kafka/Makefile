@@ -42,8 +42,8 @@ clean:
 .kafka-$(KAFKA_VERSION).tmp: ../../artifacts/binaries/kafka/archives/kafka_2.13-$(KAFKA_VERSION).tgz
 	test -d tmp/$(KAFKA_VERSION) || mkdir -p tmp/$(KAFKA_VERSION)
 	tar xvfz ../../artifacts/binaries/kafka/archives/kafka_2.13-$(KAFKA_VERSION).tgz -C tmp/$(KAFKA_VERSION) --strip-components=1
-	test -f tmp/$(KAFKA_VERSION)/libs/rocksdbjni-5.18.4.jar && cp -f /tmp/opertemp/libs/rocksdbjni-5.18.4.jar tmp/$(KAFKA_VERSION)/libs/ || true
-	test -f tmp/$(KAFKA_VERSION)/libs/rocksdbjni-6.19.3.jar && cp -f /tmp/opertemp/libs/rocksdbjni-6.19.3.jar tmp/$(KAFKA_VERSION)/libs/ || true
+	test -f tmp/$(KAFKA_VERSION)/libs/rocksdbjni-6.22.1.1.jar && cp -f /home/travis/.m2/repository/org/rocksdb/rocksdbjni/6.22.1.1/rocksdbjni-6.22.1.1.jar tmp/$(KAFKA_VERSION)/libs/ || true
+	test -f tmp/$(KAFKA_VERSION)/libs/rocksdbjni-6.19.3.jar && cp -f /home/travis/.m2/repository/org/rocksdb/rocksdbjni/6.19.3/rocksdbjni-6.19.3.jar tmp/$(KAFKA_VERSION)/libs/ || true
 	touch .kafka-$(KAFKA_VERSION).tmp
 
 .kafka-$(KAFKA_VERSION)-ignorelist.tmp: ../../artifacts/binaries/kafka/$(KAFKA_VERSION).ignorelist

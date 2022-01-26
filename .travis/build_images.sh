@@ -9,6 +9,13 @@ if [ ! -f $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.19.3/rocksdbjni-6.19.3.j
     mv -f rocksdbjni-6.19.3.jar.sha1 $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.19.3/rocksdbjni-6.19.3.jar.sha1
 fi
 
+if [ ! -f $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.22.1.1/rocksdbjni-6.22.1.1.jar ]; then
+    # Put locally built jni jars in the local maven repository
+    mkdir -p $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.22.1.1
+    mv -f rocksdbjni-6.22.1.1.jar $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.22.1.1/rocksdbjni-6.22.1.1.jar
+    mv -f rocksdbjni-6.22.1.1.jar.sha1 $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.22.1.1/rocksdbjni-6.22.1.1.jar.sha1
+fi
+
 export PATH=$HOME/apache-maven-3.8.2/bin:$PATH
 
 # Build kaniko-executor docker image locally

@@ -36,6 +36,5 @@ echo "Reloading docker images from tar balls and tag them"
 make docker_load docker_tag
 echo "Building java artifacts"
 make MVN_ARGS='-q -DskipTests -Dmaven.javadoc.skip=true' java_install
-echo "Running unit tests and integration tests"
-mvn -e -V -B -Dmaven.javadoc.skip=true -Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2 install
-
+echo "Running unit tests"
+mvn -e -V -B -Dmaven.javadoc.skip=true -DskipITs -Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2 install
