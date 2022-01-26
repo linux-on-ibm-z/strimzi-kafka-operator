@@ -11,22 +11,35 @@ cache:
   - $HOME/.m2
 jobs:
   include:
-    - stage: "Build Strimzi Images"
-      script: "./.travis/build_kaniko_build.sh"
+    - stage: "Build rocksdbjni.jar"
+      script: "./.travis/install_rocksdbjni.sh"
       workspaces:
+        create:
+          name: rocksdbjni-jar
+          paths:
+            - rocksdbjni-6.19.3.jar
+            - rocksdbjni-6.19.3.jar.sha1
+    - stage: "Build Strimzi Images"
+      script: "./.travis/build_images.sh"
+      workspaces:
+        use:
+          - rocksdbjni-jar
         create:
           name: strimzi-image-tarballs
           paths:
-            - kaniko-executor.tar.gz
-    - stage: "Running system tests"
+            - container-archives.tar.gz
+    - stage: "Running integration tests"
       workspaces:
         use:
           - strimzi-image-tarballs
-      script: "./.travis/build_kaniko_test.sh"
+      script: "./.travis/run_integration_test.sh"
 before_install:
 - if [ $(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p') -gt 1 ] ; then export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p'); export JAVA_VERSION=$JAVA_VERSION_BUILD; else export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2/p'); export JAVA_VERSION=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2.\3/p'); fi;
+- "./.travis/install_maven.sh"
 - export M2_HOME=$HOME/apache-maven-3.8.2
 - export PATH=$M2_HOME/bin:$PATH
+- echo "Current value of env variable PATH:"
+- echo $PATH
 - mkdir -vp ~/.docker/cli-plugins/
 - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6.1.linux-s390x" > ~/.docker/cli-plugins/docker-buildx
 - chmod a+x ~/.docker/cli-plugins/docker-buildx
@@ -35,7 +48,6 @@ before_install:
 - "./.travis/install_prereqs.sh"
 - gem install asciidoctor asciidoctor-pdf
 - "./.travis/install_yq.sh"
-- "./.travis/install_maven.sh"
 #- "./.travis/install_rocksdbjni.sh"
 - "./.travis/setup-helm.sh"
 install: true
