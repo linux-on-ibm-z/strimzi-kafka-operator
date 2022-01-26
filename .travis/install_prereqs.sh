@@ -9,7 +9,7 @@ sudo apt-get install -y git make cmake gcc-8 g++-8 tar wget patch ruby curl conn
 #sudo kubeadm reset
 sudo kubeadm init phase certs all
 sudo kubeadm init phase kubeconfig all
-#sudo kubeadm init phase control-plane all --pod-network-cidr=10.244.0.0/16
+sudo kubeadm init phase control-plane all --pod-network-cidr=10.244.0.0/16
 #sudo kubeadm init --v=1 --skip-phases=certs,kubeconfig,control-plane --ignore-preflight-errors=all --pod-network-cidr=10.244.0.0/16
 #sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --v=5
 sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-8 40
