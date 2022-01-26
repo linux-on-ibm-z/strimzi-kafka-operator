@@ -61,12 +61,12 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     # We have to allow trafic for ITS when NPs are turned on
     # We can allow NP after Strimzi#4092 which should fix some issues on STs side
     #sudo apt-get install linux-image-$(uname -r) socat -y
-    sudo sysctl net.ipv6.conf.all.disable_ipv6=1
-    sudo sysctl net.ipv6.conf.default.disable_ipv6=1
-    sudo sysctl net.ipv6.conf.lo.disable_ipv6=1
-    sudo sysctl -p
-    sudo systemctl enable docker.service
-    sudo systemctl restart docker
+    #sudo sysctl net.ipv6.conf.all.disable_ipv6=1
+    #sudo sysctl net.ipv6.conf.default.disable_ipv6=1
+    #sudo sysctl net.ipv6.conf.lo.disable_ipv6=1
+    #sudo sysctl -p
+    #sudo systemctl enable docker.service
+    #sudo systemctl restart docker
     curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
     sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
     sudo apt-get install -y kubelet kubeadm kubectl
