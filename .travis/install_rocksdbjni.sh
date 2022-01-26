@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#if [ ! -f $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.19.3/rocksdbjni-6.19.3.jar ] || [ ! -f $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.22.1.1/rocksdbjni-6.22.1.1.jar ]; then
+if [ ! -f $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.19.3/rocksdbjni-6.19.3.jar ] || [ ! -f $HOME/.m2/repository/org/rocksdb/rocksdbjni/6.22.1.1/rocksdbjni-6.22.1.1.jar ]; then
 
 export CUR_DIR=$(pwd)
 
@@ -59,4 +59,4 @@ cp $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1 $CUR_DIR/rocksdbjni-$
 
 export PATH=$CURPATH
 
-#fi
+fi

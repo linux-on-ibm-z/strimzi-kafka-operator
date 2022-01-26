@@ -8,3 +8,11 @@ sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-8 40
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 40
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 40
 sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-8 40
+
+export CUR_DIR=$(pwd)
+cd $HOME
+wget https://archive.apache.org/dist/maven/maven-3/3.8.2/binaries/apache-maven-3.8.2-bin.tar.gz
+tar -zxf apache-maven-3.8.2-bin.tar.gz
+export PATH=$HOME/apache-maven-3.8.2/bin:$PATH
+mvn --version
+cd $CUR_DIR
