@@ -73,7 +73,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     #sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
     sudo apt-get install -y kubelet kubeadm kubectl
     sudo swapoff -a
-    sudo kubeadm reset
+    sudo kubeadm reset -f
     sudo kubeadm init phase certs all
     sudo kubeadm init phase kubeconfig all
     sudo kubeadm init phase control-plane all --pod-network-cidr=10.244.0.0/16
