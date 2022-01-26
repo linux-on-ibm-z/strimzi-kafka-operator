@@ -67,8 +67,10 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     #sudo sysctl -p
     #sudo systemctl enable docker.service
     #sudo systemctl restart docker
-    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
-    sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+    sudo apt -y install apt-transport-https
+    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+    echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && sudo apt update
+    #sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
     sudo apt-get install -y kubelet kubeadm kubectl
     sudo swapoff -a
     sudo kubeadm reset
