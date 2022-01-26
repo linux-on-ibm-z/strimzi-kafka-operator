@@ -60,7 +60,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     # We can turn on network polices support by adding the following options --network-plugin=cni --cni=calico
     # We have to allow trafic for ITS when NPs are turned on
     # We can allow NP after Strimzi#4092 which should fix some issues on STs side
-    sudo apt-get install linux-image-$(uname -r) socat -y
+    #sudo apt-get install linux-image-$(uname -r) socat -y
     sudo sysctl net.ipv6.conf.all.disable_ipv6=1
     sudo sysctl net.ipv6.conf.default.disable_ipv6=1
     sudo sysctl net.ipv6.conf.lo.disable_ipv6=1
