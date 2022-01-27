@@ -14,20 +14,10 @@ jobs:
     - stage: "Build rocksdbjni.jar"
       name: "Building 2 versions of rocksdbjni.jar"
       script: "./.travis/install_rocksdbjni.sh"
-      workspaces:
-        create:
-          name: rocksdbjni-jar
-          paths:
-            - rocksdbjni-6.19.3.jar
-            - rocksdbjni-6.19.3.jar.sha1
-            - rocksdbjni-6.22.1.1.jar
-            - rocksdbjni-6.22.1.1.jar.sha1
     - stage: "Build Strimzi Images"
       name: "Building Strimzi images"
       script: "./.travis/build_images.sh"
       workspaces:
-        use:
-          - rocksdbjni-jar
         create:
           name: strimzi-image-tarballs
           paths:
@@ -36,14 +26,12 @@ jobs:
       name: "Running Unit tests 1"
       workspaces:
         use:
-          - rocksdbjni-jar
           - strimzi-image-tarballs
       script: "./.travis/run_integration_test.sh"
     - script: "./.travis/run_integration_test_2.sh"
       name: "Running Unit tests 2"
       workspaces:
         use:
-          - rocksdbjni-jar
           - strimzi-image-tarballs
 before_install:
 - if [ $(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p') -gt 1 ] ; then export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*).*$/\1/p'); export JAVA_VERSION=$JAVA_VERSION_BUILD; else export JAVA_VERSION_BUILD=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2/p'); export JAVA_VERSION=$(java -version 2>&1 | sed -E -n 's/.* version "([0-9]*)\.([0-9])\.([0-9]).*$/\1.\2.\3/p'); fi;

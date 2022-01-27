@@ -40,8 +40,10 @@ PORTABLE=1 make -j$(nproc) rocksdbjavastatic
 cp -f java/target/rocksdbjni-$ROCKSDB_VERSION-linux64.jar $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar
 sha1sum $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar > $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1
 sed -i "s/ .*$//g" $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1
-cp $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar $CUR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar
-cp $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1 $CUR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1
+echo "Put locally built rocksdbjni-6.19.3.jar in the local maven repository"
+mkdir -p $HOME/.m2/repository/org/rocksdb/rocksdbjni/$ROCKSDB_VERSION
+mv -f $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar $HOME/.m2/repository/org/rocksdb/rocksdbjni/$ROCKSDB_VERSION/rocksdbjni-$ROCKSDB_VERSION.jar
+mv -f $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1 $HOME/.m2/repository/org/rocksdb/rocksdbjni/$ROCKSDB_VERSION/rocksdbjni-$ROCKSDB_VERSION.jar.sha1
 
 # Build and Create rocksdbjni-6.22.1.jar for s390x
 cd .. && mv rocksdb rocksdb-6.22 && cd rocksdb-6.22/
@@ -54,8 +56,10 @@ ROCKSDB_VERSION=6.22.1.1
 cp -f java/target/rocksdbjni-6.22.1-linux64.jar $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar
 sha1sum $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar > $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1
 sed -i "s/ .*$//g" $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1
-cp $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar $CUR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar
-cp $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1 $CUR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1
+echo "Put locally built rocksdbjni-6.22.1.1.jar in the local maven repository"
+mkdir -p $HOME/.m2/repository/org/rocksdb/rocksdbjni/$ROCKSDB_VERSION
+mv -f $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar $HOME/.m2/repository/org/rocksdb/rocksdbjni/$ROCKSDB_VERSION/rocksdbjni-$ROCKSDB_VERSION.jar
+mv -f $S390X_JNI_JAR_DIR/rocksdbjni-$ROCKSDB_VERSION.jar.sha1 $HOME/.m2/repository/org/rocksdb/rocksdbjni/$ROCKSDB_VERSION/rocksdbjni-$ROCKSDB_VERSION.jar.sha1
 
 export PATH=$CURPATH
 
