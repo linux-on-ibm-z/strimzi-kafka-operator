@@ -2,9 +2,6 @@
 
 export CUR_DIR=$(pwd)
 
-export PATH=$HOME/apache-maven-3.8.2/bin:$PATH
-echo $PATH
-
 # Build kaniko-executor docker image locally
 cd $HOME
 git clone -b v1.7.0 https://github.com/GoogleContainerTools/kaniko.git

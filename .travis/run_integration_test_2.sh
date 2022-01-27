@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-export PATH=$HOME/apache-maven-3.8.2/bin:$PATH
-
 export PULL_REQUEST=${PULL_REQUEST:-true}
 export BRANCH=${BRANCH:-main}
 export TAG=${TAG:-latest}
