@@ -38,6 +38,10 @@ echo "Building java artifacts"
 make MVN_ARGS='-q -DskipTests -Dmaven.javadoc.skip=true' java_install
 echo "Building docker images"
 make MVN_ARGS='-q -DskipTests -Dmaven.javadoc.skip=true' docker_build
+echo "Listing rocksdbjni files"
+find . $HOME/.m2 -name "*rocksdb*.jar"
+echo "Listing s390x rocksdbjni files"
+find . $HOME/.m2 -name "*rocksdb*.jar" -print0 | xargs -0 -n1 unzip -l | grep s390x
 echo "Saving docker images as tar balls"
 make docker_save
 cd docker-images
