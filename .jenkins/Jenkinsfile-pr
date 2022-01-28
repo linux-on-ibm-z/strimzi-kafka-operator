@@ -54,31 +54,31 @@ pipeline {
                     env.TEST_GROUPS = params.TEST_GROUPS
                     env.ENV_VARS = params.ENV_VARS
                     env.EXCLUDE_GROUPS = DEFAULT_EXCLUDED_GROUPS
-                    if (env.ghprbCommentBody.contains('testcase=')) {
+                    if (env.ghprbCommentBody !=null && env.ghprbCommentBody.contains('testcase=')) {
                         env.TEST_CASE = env.ghprbCommentBody.split('testcase=')[1].split(/\s/)[0]
                     }
                     println("TEST_CASE: ${env.TEST_CASE}")
 
-                    if (env.ghprbCommentBody.contains('groups=')) {
+                    if (env.ghprbCommentBody !=null && env.ghprbCommentBody.contains('groups=')) {
                         env.TEST_GROUPS = env.ghprbCommentBody.split('groups=')[1].split(/\s/)[0]
                         if (env.TEST_GROUPS != "flaky") {
                             env.EXCLUDE_GROUPS = env.EXCLUDE_GROUPS + ",flaky"
                         }
-                    } else if (env.ghprbCommentBody.contains('profile=')) {
+                    } else if (env.ghprbCommentBody !=null && env.ghprbCommentBody.contains('profile=')) {
                         // in case we want to run specific profile, the -Dgroups should be empty - it overrides the groups from profiles
                         env.TEST_GROUPS = ""
                     }
                     println("TEST_GROUPS: ${env.TEST_GROUPS}")
 
-                    if (env.ghprbCommentBody.contains('profile=')) {
+                    if (env.ghprbCommentBody !=null && env.ghprbCommentBody.contains('profile=')) {
                         env.TEST_PROFILE = env.ghprbCommentBody.split('profile=')[1].split(/\s/)[0]
                     }
                     println("TEST_PROFILE: ${env.TEST_PROFILE}")
-                    if (env.ghprbCommentBody.contains('exclude=')) {
+                    if (env.ghprbCommentBody !=null && env.ghprbCommentBody.contains('exclude=')) {
                         env.EXCLUDE_GROUPS = env.EXCLUDE_GROUPS + ',' + env.ghprbCommentBody.split('exclude=')[1].split(/\s/)[0]
                     }
                     println("EXCLUDE_GROUPS: ${env.EXCLUDE_GROUPS}")
-                    if (env.ghprbCommentBody.contains('test_only')) {
+                    if (env.ghprbCommentBody !=null && env.ghprbCommentBody.contains('test_only')) {
                         env.TEST_ONLY = "true"
                         env.DOCKER_REGISTRY = "quay.io"
                         env.DOCKER_ORG="strimzi"
@@ -89,24 +89,24 @@ pipeline {
                         env.DOCKER_REGISTRY = "localhost:5000"
                         env.DOCKER_TAG="pr"
                     }
-                    if (env.ghprbCommentBody.contains('install_type=')) {
+                    if (env.ghprbCommentBody !=null && env.ghprbCommentBody.contains('install_type=')) {
                         env.CLUSTER_OPERATOR_INSTALL_TYPE = env.ghprbCommentBody.split('install_type=')[1].split(/\s/)[0]
                     }
-                    if (env.ghprbCommentBody.contains('env=')) {
+                    if (env.ghprbCommentBody !=null && env.ghprbCommentBody.contains('env=')) {
                         env.ENV_VARS = env.ghprbCommentBody.split('env=')[1]
                         for (envVar in "${env.ENV_VARS}".split(",")) {
                             env.(envVar.split("=")[0]) = envVar.split("=")[1]
                             println("${env.(envVar.split("=")[0])}")
                         }
                     }
-                    if (env.ghprbCommentBody.contains('kube_version=')) {
+                    if (env.ghprbCommentBody !=null && env.ghprbCommentBody.contains('kube_version=')) {
                         env.KUBE_VERSION = env.ghprbCommentBody.split('kube_version=')[1].split(/\s/)[0]
                     } else {
                         // Default version (the oldest supported by Strimzi)
                         env.KUBE_VERSION = "stable"
                     }
 
-                    if (env.ghprbCommentBody.contains('test_count_running_in_parallel=')) {
+                    if (env.ghprbCommentBody !=null && env.ghprbCommentBody.contains('test_count_running_in_parallel=')) {
                         env.TEST_COUNT_RUNNING_IN_PARALLEL = env.ghprbCommentBody.split('test_count_running_in_parallel=')[1].split(/\s/)[0]
                     } else {
                         env.TEST_COUNT_RUNNING_IN_PARALLEL = "3"
