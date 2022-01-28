@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
-set -e
+cd $HOME
+wget https://downloads.haskell.org/~cabal/cabal-install-2.0.0.1/cabal-install-2.0.0.1.tar.gz
+tar -xvf cabal-install-2.0.0.1.tar.gz
+cd cabal-install-2.0.0.1
+./bootstrap.sh
 
-readonly VERSION="0.7.2"
-wget https://github.com/koalaman/shellcheck/releases/download/v$VERSION/shellcheck-v$VERSION.linux.x86_64.tar.xz -O shellcheck.tar.xz
-tar xf shellcheck.tar.xz -C /tmp --strip-components 1
-chmod +x /tmp/shellcheck
-sudo mv /tmp/shellcheck /usr/bin
+export PATH=$HOME/.cabal/bin:$PATH
+cabal --version
+cabal update
+
+cd $HOME
+git clone https://github.com/koalaman/shellcheck.git
+cd shellcheck/
+git checkout v0.7.2
+cabal install
+cabal test
+shellcheck --version
