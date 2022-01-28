@@ -56,6 +56,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     touch $HOME/.kube/config
 
     docker run -d -p 5000:5000 s390x/registry:2.8.0-beta.1
+    docker tag s390x/registry:2.8.0-beta.1 registry:2.7.1
 
     export KUBECONFIG=$HOME/.kube/config
     # We can turn on network polices support by adding the following options --network-plugin=cni --cni=calico
