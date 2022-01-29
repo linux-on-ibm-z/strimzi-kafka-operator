@@ -19,7 +19,7 @@ pipeline {
     }
     options {
         timeout(time: 24, unit: 'HOURS')
-        ansiColor('xterm')
+        //ansiColor('xterm')
     }
     environment {
         ARTIFACTS_DIR = 'systemtest/target/logs'
