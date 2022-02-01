@@ -87,8 +87,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     git clone -b v1.9.11 --depth 1 https://github.com/kubernetes/kubernetes.git
     cd kubernetes/cluster/addons/registry/images/
     sed -i 's/:1.11//' Dockerfile
-    make build
-    docker tag gcr.io/google_containers/kube-registry-proxy:0.4 gcr.io/google_containers/kube-registry-proxy:0.4-s390x
+    docker build --pull -t gcr.io/google_containers/kube-registry-proxy:0.4-s390x
     minikube cache add s390x/registry:2.8.0-beta.1 gcr.io/google_containers/kube-registry-proxy:0.4-s390x
     minikube cache list
     minikube addons images registry
