@@ -84,7 +84,16 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
       set -ex
     fi
 
-    minikube addons enable registry
+    git clone -b v1.9.11 https://github.com/kubernetes/kubernetes.git
+    cd kubernetes/cluster/addons/registry/images/
+    sed -i 's/:1.11//' Dockerfile
+    make build
+    docker tag gcr.io/google_containers/kube-registry-proxy:0.4 gcr.io/google_containers/kube-registry-proxy:0.4-s390x
+    minikube cache add s390x/registry:2.8.0-beta.1 gcr.io/google_containers/kube-registry-proxy:0.4-s390x
+    minikube cache list
+    minikube addons images registry
+    minikube addons enable registry --images="Registry=s390x/registry:2.8.0-beta.1,KubeRegistryProxy=google_containers/kube-registry-proxy:0.4-s390x"
+    #minikube addons enable registry
     minikube addons enable registry-aliases
 
     kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=kube-system:default
