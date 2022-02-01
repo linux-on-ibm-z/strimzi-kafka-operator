@@ -84,7 +84,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
       set -ex
     fi
 
-    git clone -b v1.9.11 https://github.com/kubernetes/kubernetes.git
+    git clone -b v1.9.11 --depth 1 https://github.com/kubernetes/kubernetes.git
     cd kubernetes/cluster/addons/registry/images/
     sed -i 's/:1.11//' Dockerfile
     make build
