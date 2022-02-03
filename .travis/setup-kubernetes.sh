@@ -73,6 +73,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     #sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
     sudo apt-get install -y kubelet kubeadm kubectl
     sudo swapoff -a
+    sudo sed -i '/ swap / s/^/#/' /etc/fstab
     sudo kubeadm reset -f
     sudo kubeadm init phase certs all
     sudo kubeadm init phase kubeconfig all
