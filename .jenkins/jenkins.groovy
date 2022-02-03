@@ -25,9 +25,6 @@ def installYq(String workspace) {
 }
 
 def buildStrimziImages() {
-    sh(script: "git clone -b v1.7.0 https://github.com/GoogleContainerTools/kaniko.git")
-    sh(script: "cd kaniko && docker buildx build --platform linux/s390x --load --build-arg GOARCH=s390x -t local/kaniko-project/executor:v1.7.0 -f ./deploy/Dockerfile .")
-    sh(script: "docker tag local/kaniko-project/executor:v1.7.0 gcr.io/kaniko-project/executor:v1.7.0")
     sh(script: """
         eval \$(minikube docker-env)
         MVN_ARGS='-Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2' make all
