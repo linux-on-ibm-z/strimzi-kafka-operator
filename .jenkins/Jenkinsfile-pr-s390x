@@ -171,11 +171,11 @@ pipeline {
                 }
             }
         }
-        stage('Build Keycloak images') {
+        stage('Build Keycloak and Opa images') {
             steps {
                 timeout(time: 20, unit: 'MINUTES') {
                     script {
-                        lib.buildKeycloak(env.WORKSPACE)
+                        lib.buildKeycloakAndOpa(env.WORKSPACE)
                     }
                 }
             }

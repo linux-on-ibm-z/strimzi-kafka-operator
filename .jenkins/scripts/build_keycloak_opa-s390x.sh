@@ -8,4 +8,5 @@ sed -i 's#kubectl delete -n \${NAMESPACE} -f https://github.com/keycloak/keycloa
 docker load < $HOME/$S390X_IMAGE_TARBALL_DIR/keycloak-15.0.2.tar.gz
 docker load < $HOME/$S390X_IMAGE_TARBALL_DIR/keycloak-init-container-master.tar.gz
 docker load < $HOME/$S390X_IMAGE_TARBALL_DIR/keycloak-operator-15.0.2.tar.gz
+docker load < $HOME/$S390X_IMAGE_TARBALL_DIR/opa-latest.tar.gz
         

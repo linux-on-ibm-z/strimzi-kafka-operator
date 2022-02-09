@@ -24,8 +24,8 @@ def installYq(String workspace) {
     sh(script: "${workspace}/.jenkins/scripts/install_yq-s390x.sh")
 }
 
-def buildKeycloak(String workspace) {
-    sh(script: "${workspace}/.jenkins/scripts/build_keycloak-s390x.sh")
+def buildKeycloakAndOpa(String workspace) {
+    sh(script: "${workspace}/.jenkins/scripts/build_keycloak_opa-s390x.sh")
 }
 
 def applys390xpatch(String workspace) {
