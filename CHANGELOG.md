@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.28.0
+
+* Add support for Kafka 3.1.0; remove Kafka 2.8.0 and 2.8.1
+* Add support for `StrimziPodSet` resources (disabled by default through the `UseStrimziPodSets` feature gate)
+* Update Open Policy Agent authorizer to 1.4.0 and add support for enabling metrics
+* Add connector context to the default logging configuration in Kafka Connect and Kafka Mirror Maker 2
+* Added the option `createBootstrapService` in the Kafka Spec to disable the creation of the bootstrap service for the Load Balancer Type Listener. It will save the cost of one load balancer resource, specially in the public cloud.
+* Add support for disabling the FIPS mode in OpenJDK
+* Fix renewing your own CA certificates [#5466](https://github.com/strimzi/strimzi-kafka-operator/issues/5466)
+
+### Changes, deprecations and removals
+
+* The Strimzi Identity Replication Policy (class `io.strimzi.kafka.connect.mirror.IdentityReplicationPolicy`) is now deprecated and will be removed in the future.
+  Please update to Kafka's own Identity Replication Policy (class `org.apache.kafka.connect.mirror.IdentityReplicationPolicy`).
+* The `type` field in `ListenerStatus` has been deprecated and will be removed in the future.
+
 ## 0.27.0
 
 * Multi-arch container images with support for x86_64 / AMD64 and AArch64 / ARM64 platforms
@@ -7,13 +23,16 @@
 * Added the option to configure the Cluster Operator's Zookeeper admin client session timeout via an new env var: `STRIMZI_ZOOKEEPER_ADMIN_SESSION_TIMEOUT_MS`
 * The `ControlPlaneListener` and `ServiceAccountPatching` feature gates are now in the _beta_ phase and are enabled by default.
 * Allow setting any extra environment variables for the Cluster Operator container through Helm using a new `extraEnvs` value.
+* Added SCRAM-SHA-256 authentication for Kafka clients
+* Update OPA Authorizer to 1.3.0
+* Update to Cruise Control version 2.5.79
+* Update Log4j2 to 2.17.0
 
 ### Changes, deprecations and removals
 
 * The `ControlPlaneListener` feature gate is now enabled by default.
   When upgrading from Strimzi 0.22 or earlier, you have to disable the `ControlPlaneListener` feature gate when upgrading the cluster operator to make sure the Kafka cluster stays available during the upgrade.
   When downgrading to Strimzi 0.22 or earlier, you have to disable the `ControlPlaneListener` feature gate before downgrading the cluster operator to make sure the Kafka cluster stays available during the downgrade.
-* Update to Cruise Control version 2.5.74
 
 ## 0.26.0
 

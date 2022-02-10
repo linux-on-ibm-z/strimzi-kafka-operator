@@ -8,7 +8,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import io.strimzi.test.TestUtils;
 import io.strimzi.test.k8s.exceptions.KubeClusterException;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -25,6 +24,7 @@ public class KafkaMirrorMakerCrdIT extends AbstractCrdIT {
 
     public static final String NAMESPACE = "kafkamirrormaker-crd-it";
 
+    @SuppressWarnings("deprecation")
     @Test
     void testKafkaMirrorMakerScaling() {
         createScaleDelete(KafkaMirrorMaker.class, "KafkaMirrorMaker.yaml");
@@ -35,9 +35,8 @@ public class KafkaMirrorMakerCrdIT extends AbstractCrdIT {
         createDeleteCustomResource("KafkaMirrorMaker-minimal.yaml");
     }
 
-    @Disabled("See https://github.com/strimzi/strimzi-kafka-operator/issues/4606")
     @Test
-    void testCreateKafkaMirrorMakerWithExtraProperty() {
+    void testKafkaMirrorMakerWithExtraProperty() {
         Throwable exception = assertThrows(
             KubeClusterException.class,
             () -> createDeleteCustomResource("KafkaMirrorMaker-with-extra-property.yaml"));
@@ -49,9 +48,7 @@ public class KafkaMirrorMakerCrdIT extends AbstractCrdIT {
     void testKafkaMirrorMakerWithMissingRequired() {
         Throwable exception = assertThrows(
             KubeClusterException.class,
-            () -> {
-                createDeleteCustomResource("KafkaMirrorMaker-with-missing-required-property.yaml");
-            });
+            () -> createDeleteCustomResource("KafkaMirrorMaker-with-missing-required-property.yaml"));
 
         assertMissingRequiredPropertiesMessage(exception.getMessage(),
                 "bootstrapServers",
@@ -71,7 +68,7 @@ public class KafkaMirrorMakerCrdIT extends AbstractCrdIT {
     @Test
     void testKafkaMirrorMakerWithTlsAuthWithMissingRequired() {
         Throwable exception = assertThrows(
-            KubeClusterException.InvalidResource.class,
+            KubeClusterException.class,
             () -> createDeleteCustomResource("KafkaMirrorMaker-with-tls-auth-with-missing-required.yaml"));
 
         assertMissingRequiredPropertiesMessage(exception.getMessage(),
@@ -96,9 +93,15 @@ public class KafkaMirrorMakerCrdIT extends AbstractCrdIT {
 
     @BeforeAll
     void setupEnvironment() {
-        cluster.createNamespace(NAMESPACE);
         cluster.createCustomResources(TestUtils.CRD_KAFKA_MIRROR_MAKER);
         cluster.waitForCustomResourceDefinition("kafkamirrormakers.kafka.strimzi.io");
+        cluster.createNamespace(NAMESPACE);
+
+        try {
+            Thread.sleep(1_000L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @AfterAll

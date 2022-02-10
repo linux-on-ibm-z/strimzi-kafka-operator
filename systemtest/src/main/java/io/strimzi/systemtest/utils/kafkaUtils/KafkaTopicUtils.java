@@ -29,6 +29,7 @@ public class KafkaTopicUtils {
     private static final String TOPIC_NAME_PREFIX = "my-topic-";
     private static final long READINESS_TIMEOUT = ResourceOperation.getTimeoutForResourceReadiness(KafkaTopic.RESOURCE_KIND);
     private static final long DELETION_TIMEOUT = ResourceOperation.getTimeoutForResourceDeletion();
+    private static final Random RANDOM = new Random();
 
     private KafkaTopicUtils() {}
 
@@ -37,30 +38,40 @@ public class KafkaTopicUtils {
      * @return random name with additional salt
      */
     public static String generateRandomNameOfTopic() {
-        String salt = new Random().nextInt(Integer.MAX_VALUE) + "-" + new Random().nextInt(Integer.MAX_VALUE);
+        String salt = RANDOM.nextInt(Integer.MAX_VALUE) + "-" + RANDOM.nextInt(Integer.MAX_VALUE);
 
         return  TOPIC_NAME_PREFIX + salt;
     }
 
     /**
      * Method which return UID for specific topic
+     * @param namespaceName namespace name
      * @param topicName topic name
      * @return topic UID
      */
+    public static String topicSnapshot(final String namespaceName, String topicName) {
+        return KafkaTopicResource.kafkaTopicClient().inNamespace(namespaceName).withName(topicName).get().getMetadata().getUid();
+    }
+
     public static String topicSnapshot(String topicName) {
-        return KafkaTopicResource.kafkaTopicClient().inNamespace(kubeClient().getNamespace()).withName(topicName).get().getMetadata().getUid();
+        return topicSnapshot(kubeClient().getNamespace(), topicName);
     }
 
     /**
      * Method which wait until topic has rolled form one generation to another.
+     * @param namespaceName name of the namespace
      * @param topicName topic name
      * @param topicUid topic UID
      * @return topic new UID
      */
-    public static String waitTopicHasRolled(String topicName, String topicUid) {
+    public static String waitTopicHasRolled(final String namespaceName, String topicName, String topicUid) {
         TestUtils.waitFor("Topic " + topicName + " has rolled", Constants.GLOBAL_POLL_INTERVAL, Constants.GLOBAL_TIMEOUT,
-            () -> !topicUid.equals(topicSnapshot(topicName)));
-        return topicSnapshot(topicName);
+            () -> !topicUid.equals(topicSnapshot(namespaceName, topicName)));
+        return topicSnapshot(namespaceName, topicName);
+    }
+
+    public static String waitTopicHasRolled(String topicName, String topicUid) {
+        return waitTopicHasRolled(kubeClient().getNamespace(), topicName, topicUid);
     }
 
     public static void waitForKafkaTopicCreation(String namespaceName, String topicName) {
@@ -148,15 +159,19 @@ public class KafkaTopicUtils {
         return waitForKafkaTopicStatus(kubeClient().getNamespace(), topicName, Ready);
     }
 
+    public static boolean waitForKafkaTopicNotReady(final String namespaceName, String topicName) {
+        return waitForKafkaTopicStatus(namespaceName, topicName, NotReady);
+    }
+
     public static boolean waitForKafkaTopicNotReady(String topicName) {
         return waitForKafkaTopicStatus(kubeClient().getNamespace(), topicName, NotReady);
     }
 
-    public static void waitForKafkaTopicsCount(int topicCount, String clusterName) {
+    public static void waitForKafkaTopicsCount(final String namespaceName, int topicCount, String clusterName) {
         LOGGER.info("Wait until we create {} KafkaTopics", topicCount);
         TestUtils.waitFor(topicCount + " KafkaTopics creation",
             Constants.GLOBAL_POLL_INTERVAL, Constants.GLOBAL_TIMEOUT,
-            () -> KafkaCmdClient.listTopicsUsingPodCli(clusterName, 0).size() == topicCount);
+            () -> KafkaCmdClient.listTopicsUsingPodCli(namespaceName, clusterName, 0).size() == topicCount);
         LOGGER.info("{} KafkaTopics were created", topicCount);
     }
 

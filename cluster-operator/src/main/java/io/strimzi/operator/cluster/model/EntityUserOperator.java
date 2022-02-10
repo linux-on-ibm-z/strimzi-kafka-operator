@@ -8,6 +8,7 @@ import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.SecurityContext;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
@@ -21,6 +22,7 @@ import io.strimzi.api.kafka.model.ContainerEnvVar;
 import io.strimzi.api.kafka.model.EntityOperatorSpec;
 import io.strimzi.api.kafka.model.EntityUserOperatorSpec;
 import io.strimzi.api.kafka.model.Kafka;
+import io.strimzi.api.kafka.model.KafkaResources;
 import io.strimzi.api.kafka.model.Probe;
 import io.strimzi.api.kafka.model.ProbeBuilder;
 import io.strimzi.operator.cluster.ClusterOperatorConfig;
@@ -39,10 +41,11 @@ import static java.util.Collections.singletonList;
  */
 public class EntityUserOperator extends AbstractModel {
     protected static final String APPLICATION_NAME = "entity-user-operator";
-
+    
     protected static final String USER_OPERATOR_CONTAINER_NAME = "user-operator";
     private static final String NAME_SUFFIX = "-entity-user-operator";
     protected static final String METRICS_AND_LOG_CONFIG_SUFFIX = NAME_SUFFIX + "-config";
+    private static final String CERT_SECRET_KEY_NAME = "entity-operator";
 
     // Port configuration
     protected static final int HEALTHCHECK_PORT = 8081;
@@ -148,6 +151,10 @@ public class EntityUserOperator extends AbstractModel {
 
     public String getSecretPrefix() {
         return secretPrefix;
+    }
+
+    public static String secretName(String cluster) {
+        return KafkaResources.entityUserOperatorSecretName(cluster);
     }
 
     public void setSecretPrefix(String secretPrefix) {
@@ -277,11 +284,11 @@ public class EntityUserOperator extends AbstractModel {
         varList.add(buildEnvVar(ENV_VAR_CLIENTS_CA_VALIDITY, Integer.toString(clientsCaValidityDays)));
         varList.add(buildEnvVar(ENV_VAR_CLIENTS_CA_RENEWAL, Integer.toString(clientsCaRenewalDays)));
         varList.add(buildEnvVar(ENV_VAR_CLUSTER_CA_CERT_SECRET_NAME, KafkaCluster.clusterCaCertSecretName(cluster)));
-        varList.add(buildEnvVar(ENV_VAR_EO_KEY_SECRET_NAME, EntityOperator.secretName(cluster)));
+        varList.add(buildEnvVar(ENV_VAR_EO_KEY_SECRET_NAME, EntityUserOperator.secretName(cluster)));
         varList.add(buildEnvVar(ENV_VAR_STRIMZI_GC_LOG_ENABLED, String.valueOf(gcLoggingEnabled)));
         varList.add(buildEnvVar(ENV_VAR_SECRET_PREFIX, secretPrefix));
         varList.add(buildEnvVar(ENV_VAR_ACLS_ADMIN_API_SUPPORTED, String.valueOf(aclsAdminApiSupported)));
-        EntityOperator.javaOptions(varList, getJvmOptions(), javaSystemProperties);
+        ModelUtils.javaOptions(varList, getJvmOptions(), javaSystemProperties);
 
         // Add shared environment variables used for all containers
         varList.addAll(getRequiredEnvVars());
@@ -298,7 +305,7 @@ public class EntityUserOperator extends AbstractModel {
     private List<VolumeMount> getVolumeMounts() {
         return asList(createTempDirVolumeMount(USER_OPERATOR_TMP_DIRECTORY_DEFAULT_VOLUME_NAME),
                 VolumeUtils.createVolumeMount(logAndMetricsConfigVolumeName, logAndMetricsConfigMountPath),
-                VolumeUtils.createVolumeMount(EntityOperator.TLS_SIDECAR_EO_CERTS_VOLUME_NAME, EntityOperator.TLS_SIDECAR_EO_CERTS_VOLUME_MOUNT),
+                VolumeUtils.createVolumeMount(EntityOperator.EUO_CERTS_VOLUME_NAME, EntityOperator.EUO_CERTS_VOLUME_MOUNT),
                 VolumeUtils.createVolumeMount(EntityOperator.TLS_SIDECAR_CA_CERTS_VOLUME_NAME, EntityOperator.TLS_SIDECAR_CA_CERTS_VOLUME_MOUNT));
     }
 
@@ -354,5 +361,21 @@ public class EntityUserOperator extends AbstractModel {
             properties.addPair("monitorInterval", "30");
         }
         return super.createLog4jProperties(properties);
+    }
+
+    /**
+     * Generate the Secret containing the Entity User Operator certificate signed by the cluster CA certificate used for TLS based
+     * internal communication with Kafka and Zookeeper.
+     * It also contains the related Entity User Operator private key.
+     *
+     * @param clusterCa The cluster CA.
+     * @param isMaintenanceTimeWindowsSatisfied Indicates whether we are in the maintenance window or not.
+     *                                          This is used for certificate renewals
+     * @return The generated Secret.
+     */
+    public Secret generateSecret(ClusterCa clusterCa, boolean isMaintenanceTimeWindowsSatisfied) {
+        Secret secret = clusterCa.entityUserOperatorSecret();
+        return ModelUtils.buildSecret(reconciliation, clusterCa, secret, namespace, EntityUserOperator.secretName(cluster), name, 
+            CERT_SECRET_KEY_NAME, labels, createOwnerReference(), isMaintenanceTimeWindowsSatisfied);
     }
 }

@@ -17,9 +17,11 @@ import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.strimzi.api.kafka.Crds;
 import io.strimzi.api.kafka.KafkaList;
+import io.strimzi.api.kafka.StrimziPodSetList;
 import io.strimzi.api.kafka.model.Kafka;
 import io.strimzi.api.kafka.model.KafkaBuilder;
 import io.strimzi.api.kafka.model.KafkaResources;
+import io.strimzi.api.kafka.model.StrimziPodSet;
 import io.strimzi.api.kafka.model.listener.arraylistener.GenericKafkaListenerBuilder;
 import io.strimzi.api.kafka.model.listener.arraylistener.KafkaListenerType;
 import io.strimzi.certs.CertManager;
@@ -89,7 +91,7 @@ public class KafkaAssemblyOperatorCustomCertTest {
         ReconciliationState createReconciliationState(Reconciliation reconciliation, Kafka kafkaAssembly) {
             return new ReconciliationState(reconciliation, kafkaAssembly) {
                 @Override
-                Future<Void> maybeRollKafka(StatefulSet sts, Function<Pod, List<String>> podNeedsRestart) {
+                Future<Void> maybeRollKafka(int replicas, Function<Pod, List<String>> podNeedsRestart) {
                     functionArgumentCaptor.add(podNeedsRestart);
                     return Future.succeededFuture();
                 }
@@ -118,6 +120,7 @@ public class KafkaAssemblyOperatorCustomCertTest {
 
         client = new MockKube()
                 .withCustomResourceDefinition(Crds.kafka(), Kafka.class, KafkaList.class).end()
+                .withCustomResourceDefinition(Crds.strimziPodSet(), StrimziPodSet.class, StrimziPodSetList.class).end()
                 .build();
         Crds.kafkaOperation(client).inNamespace(namespace).create(kafka);
         client.secrets().inNamespace(namespace).create(getTlsSecret());

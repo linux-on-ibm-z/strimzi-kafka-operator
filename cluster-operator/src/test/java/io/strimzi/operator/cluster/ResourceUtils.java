@@ -110,6 +110,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -357,13 +358,12 @@ public class ResourceUtils {
                                     Logging kafkaLogging, Logging zkLogging,
                                     KafkaExporterSpec keSpec,
                                     CruiseControlSpec ccSpec) {
-        Kafka result = new Kafka();
+
         ObjectMeta meta = new ObjectMetaBuilder()
             .withNamespace(namespace)
             .withName(name)
             .withLabels(Labels.fromMap(TestUtils.map(Labels.KUBERNETES_DOMAIN + "part-of", "tests", "my-user-label", "cromulent")).toMap())
             .build();
-        result.setMetadata(meta);
 
         KafkaSpec spec = new KafkaSpec();
 
@@ -408,8 +408,7 @@ public class ResourceUtils {
         spec.setCruiseControl(ccSpec);
         spec.setZookeeper(zk);
 
-        result.setSpec(spec);
-        return result;
+        return new Kafka(null, meta, spec, null);
     }
 
     /**
@@ -609,7 +608,7 @@ public class ResourceUtils {
                 } catch (ReflectiveOperationException e) {
                     throw new RuntimeException(e);
                 }
-                when(mock.describeTopics(any())).thenReturn(dtr);
+                when(mock.describeTopics(any(Collection.class))).thenReturn(dtr);
 
                 DescribeConfigsResult dcfr;
                 try {
@@ -760,7 +759,8 @@ public class ResourceUtils {
                 null,
                 featureGates,
                 10,
-                10_000);
+                10_000,
+                30);
     }
 
     public static ClusterOperatorConfig dummyClusterOperatorConfigRolesOnly(KafkaVersion.Lookup versions, long operationTimeoutMs) {
@@ -780,7 +780,8 @@ public class ResourceUtils {
                 null,
                 "",
                 10,
-                10_000);
+                10_000,
+                30);
     }
 
     public static ClusterOperatorConfig dummyClusterOperatorConfig(KafkaVersion.Lookup versions, long operationTimeoutMs) {

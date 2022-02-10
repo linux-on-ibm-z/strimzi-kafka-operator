@@ -14,6 +14,7 @@ import io.strimzi.api.kafka.model.KafkaAuthorizationOpa;
 import io.strimzi.api.kafka.model.KafkaAuthorizationSimple;
 import io.strimzi.api.kafka.model.KafkaResources;
 import io.strimzi.api.kafka.model.Rack;
+import io.strimzi.api.kafka.model.listener.KafkaListenerAuthenticationCustom;
 import io.strimzi.api.kafka.model.listener.arraylistener.GenericKafkaListener;
 import io.strimzi.api.kafka.model.listener.KafkaListenerAuthentication;
 import io.strimzi.api.kafka.model.listener.KafkaListenerAuthenticationOAuth;
@@ -23,6 +24,7 @@ import io.strimzi.api.kafka.model.listener.arraylistener.GenericKafkaListenerCon
 import io.strimzi.kafka.oauth.server.ServerConfig;
 import io.strimzi.operator.cluster.operator.resource.cruisecontrol.CruiseControlConfigurationParameters;
 import io.strimzi.kafka.oauth.server.plain.ServerPlainConfig;
+import io.strimzi.operator.common.Reconciliation;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -41,12 +43,16 @@ import java.util.stream.Collectors;
 public class KafkaBrokerConfigurationBuilder {
     private final StringWriter stringWriter = new StringWriter();
     private final PrintWriter writer = new PrintWriter(stringWriter);
+    private final Reconciliation reconciliation;
 
     /**
      * Broker configuration template constructor
+     *
+     * @param reconciliation The reconciliation
      */
-    public KafkaBrokerConfigurationBuilder() {
+    public KafkaBrokerConfigurationBuilder(Reconciliation reconciliation) {
         printHeader();
+        this.reconciliation = reconciliation;
     }
 
     /**
@@ -58,6 +64,9 @@ public class KafkaBrokerConfigurationBuilder {
     public KafkaBrokerConfigurationBuilder withBrokerId()   {
         printSectionHeader("Broker ID");
         writer.println("broker.id=${STRIMZI_BROKER_ID}");
+        // Node ID is ignored when not using Kraft mode => but it defaults to broker ID when not set
+        // We set it here in the configuration explicitly to avoid never ending rolling updates
+        writer.println("node.id=${STRIMZI_BROKER_ID}");
 
         writer.println();
 
@@ -378,6 +387,11 @@ public class KafkaBrokerConfigurationBuilder {
             writer.println(String.format("listener.name.%s.ssl.truststore.password=${CERTS_STORE_PASSWORD}", listenerNameInProperty));
             writer.println(String.format("listener.name.%s.ssl.truststore.type=PKCS12", listenerNameInProperty));
             writer.println();
+        } else if (auth instanceof KafkaListenerAuthenticationCustom) {
+            KafkaListenerAuthenticationCustom customAuth = (KafkaListenerAuthenticationCustom) auth;
+            securityProtocol.add(String.format("%s:%s", listenerName, getSecurityProtocol(tls, customAuth.isSasl())));
+            KafkaListenerCustomAuthConfiguration config = new KafkaListenerCustomAuthConfiguration(reconciliation, customAuth.getListenerConfig().entrySet());
+            config.asOrderedProperties().asMap().forEach((key, value) -> writer.println(String.format("listener.name.%s.%s=%s", listenerNameInProperty, key, value)));
         } else {
             securityProtocol.add(String.format("%s:%s", listenerName, getSecurityProtocol(tls, false)));
         }
@@ -469,7 +483,8 @@ public class KafkaBrokerConfigurationBuilder {
 
             // Broker super users
             superUsers.add(String.format("User:CN=%s,O=io.strimzi", KafkaResources.kafkaStatefulSetName(clusterName)));
-            superUsers.add(String.format("User:CN=%s-%s,O=io.strimzi", clusterName, "entity-operator"));
+            superUsers.add(String.format("User:CN=%s-%s,O=io.strimzi", clusterName, "entity-topic-operator"));
+            superUsers.add(String.format("User:CN=%s-%s,O=io.strimzi", clusterName, "entity-user-operator"));
             superUsers.add(String.format("User:CN=%s-%s,O=io.strimzi", clusterName, "kafka-exporter"));
             superUsers.add(String.format("User:CN=%s-%s,O=io.strimzi", clusterName, "cruise-control"));
 
@@ -506,6 +521,7 @@ public class KafkaBrokerConfigurationBuilder {
 
             writer.println(String.format("%s=%s", "opa.authorizer.url", opaAuthz.getUrl()));
             writer.println(String.format("%s=%b", "opa.authorizer.allow.on.error", opaAuthz.isAllowOnError()));
+            writer.println(String.format("%s=%b", "opa.authorizer.metrics.enabled", opaAuthz.isEnableMetrics()));
             writer.println(String.format("%s=%d", "opa.authorizer.cache.initial.capacity", opaAuthz.getInitialCacheCapacity()));
             writer.println(String.format("%s=%d", "opa.authorizer.cache.maximum.size", opaAuthz.getMaximumCacheSize()));
             writer.println(String.format("%s=%d", "opa.authorizer.cache.expire.after.seconds", Duration.ofMillis(opaAuthz.getExpireAfterMs()).getSeconds()));

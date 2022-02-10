@@ -114,7 +114,7 @@ spec:
         sync.topic.acls.enabled: "false" <23>
         refresh.topics.interval.seconds: 60 <24>
         replication.policy.separator: "" <25>
-        replication.policy.class: "io.strimzi.kafka.connect.mirror.IdentityReplicationPolicy" <26>
+        replication.policy.class: "org.apache.kafka.connect.mirror.IdentityReplicationPolicy" <26>
     heartbeatConnector: <27>
       config:
         heartbeats.topic.replication.factor: 1 <28>
@@ -125,7 +125,7 @@ spec:
         sync.group.offsets.enabled: true <32>
         sync.group.offsets.interval.seconds: 60 <33>
         emit.checkpoints.interval.seconds: 60 <34>
-        replication.policy.class: "io.strimzi.kafka.connect.mirror.IdentityReplicationPolicy"
+        replication.policy.class: "org.apache.kafka.connect.mirror.IdentityReplicationPolicy"
     topicsPattern: ".*" <35>
     groupsPattern: "group1|group2|group3" <36>
   resources: <37>
@@ -190,7 +190,7 @@ spec:
 <3> xref:type-KafkaMirrorMaker2Spec-reference[Kafka cluster alias] for Kafka Connect, which must specify the *target* Kafka cluster. The Kafka cluster is used by Kafka Connect for its internal topics.
 <4> xref:type-KafkaMirrorMaker2ClusterSpec-reference[Specification] for the Kafka clusters being synchronized.
 <5> xref:type-KafkaMirrorMaker2ClusterSpec-reference[Cluster alias] for the source Kafka cluster.
-<6> Authentication for the source cluster, using the xref:type-KafkaClientAuthenticationTls-reference[TLS mechanism], as shown here, using xref:type-KafkaClientAuthenticationOAuth-reference[OAuth bearer tokens], or a SASL-based xref:type-KafkaClientAuthenticationScramSha512-reference[SCRAM-SHA-512] or xref:type-KafkaClientAuthenticationPlain-reference[PLAIN] mechanism.
+<6> Authentication for the source cluster, using the xref:type-KafkaClientAuthenticationTls-reference[TLS mechanism], as shown here, using xref:type-KafkaClientAuthenticationOAuth-reference[OAuth bearer tokens], or a SASL-based xref:type-KafkaClientAuthenticationScramSha256-reference[SCRAM-SHA-256]/xref:type-KafkaClientAuthenticationScramSha512-reference[SCRAM-SHA-512] or xref:type-KafkaClientAuthenticationPlain-reference[PLAIN] mechanism.
 <7> xref:con-common-configuration-bootstrap-reference[Bootstrap server] for connection to the source Kafka cluster.
 <8> xref:con-common-configuration-trusted-certificates-reference[TLS encryption] with key names under which TLS certificates are stored in X.509 format for the source Kafka cluster. If certificates are stored in the same secret, it can be listed multiple times.
 <9> xref:type-KafkaMirrorMaker2ClusterSpec-reference[Cluster alias] for the target Kafka cluster.
@@ -208,7 +208,7 @@ Standard Apache Kafka configuration may be provided, restricted to those propert
 <20> The maximum number of tasks that the connector may create. Tasks handle the data replication and run in parallel. If the infrastructure supports the processing overhead, increasing this value can improve throughput. Kafka Connect distributes the tasks between members of the cluster. If there are more tasks than workers, workers are assigned multiple tasks. For sink connectors, aim to have one task for each topic partition consumed. For source connectors, the number of tasks that can run in parallel may also depend on the external system. The connector creates fewer than the maximum number of tasks if it cannot achieve the parallelism.
 <21> Replication factor for mirrored topics created at the target cluster.
 <22> Replication factor for the `MirrorSourceConnector` `offset-syncs` internal topic that maps the offsets of the source and target clusters.
-<23> When xref:con-mirrormaker-acls-{context}[ACL rules synchronization] is enabled, ACLs are applied to synchronized topics. The default is `true`.
+<23> When xref:con-mirrormaker-acls-{context}[ACL rules synchronization] is enabled, ACLs are applied to synchronized topics. The default is `true`. This feature is not compatible with the User Operator. If you are using the User Operator, set this property to `false`.
 <24> Optional setting to change the frequency of checks for new topics. The default is for a check every 10 minutes.
 <25> Defines the separator used for the renaming of remote topics.
 <26> Adds a policy that overrides the automatic renaming of remote topics. Instead of prepending the name with the name of the source cluster, the topic retains its original name. This optional setting is useful for active/passive backups and data migration.
@@ -233,7 +233,7 @@ You can use comma-separated lists.
 <43> Environment variables are also xref:ref-tracing-environment-variables-str[set for distributed tracing using Jaeger].
 <44> xref:assembly-distributed-tracing-str[Distributed tracing is enabled for Jaeger].
 <45> xref:type-ExternalConfiguration-reference[External configuration] for a Kubernetes Secret mounted to Kafka MirrorMaker as an environment variable.
-You can also use the _Kubernetes Configuration Provider_ to xref:proc-loading-config-with-provider-str[load configuration values from external sources].
+You can also use _configuration provider plugins_ to xref:assembly-loading-config-with-providers-str[load configuration values from external sources].
 
 . Create or update the resource:
 +

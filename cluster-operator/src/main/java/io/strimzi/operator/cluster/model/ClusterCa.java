@@ -24,7 +24,8 @@ import io.strimzi.operator.common.Reconciliation;
 public class ClusterCa extends Ca {
 
     private final String clusterName;
-    private Secret entityOperatorSecret;
+    private Secret entityTopicOperatorSecret;
+    private Secret entityUserOperatorSecret;
     private Secret clusterOperatorSecret;
     private Secret kafkaExporterSecret;
     private Secret cruiseControlSecret;
@@ -84,8 +85,10 @@ public class ClusterCa extends Ca {
             String name = secret.getMetadata().getName();
             if (KafkaCluster.brokersSecretName(clusterName).equals(name)) {
                 brokersSecret = secret;
-            } else if (EntityOperator.secretName(clusterName).equals(name)) {
-                entityOperatorSecret = secret;
+            } else if (EntityTopicOperator.secretName(clusterName).equals(name)) {
+                entityTopicOperatorSecret = secret;
+            } else if (EntityUserOperator.secretName(clusterName).equals(name)) {
+                entityUserOperatorSecret = secret;
             } else if (ZookeeperCluster.nodesSecretName(clusterName).equals(name)) {
                 zkNodesSecret = secret;
             } else if (ClusterOperator.secretName(clusterName).equals(name)) {
@@ -98,8 +101,12 @@ public class ClusterCa extends Ca {
         }
     }
 
-    public Secret entityOperatorSecret() {
-        return entityOperatorSecret;
+    public Secret entityTopicOperatorSecret() {
+        return entityTopicOperatorSecret;
+    }
+
+    public Secret entityUserOperatorSecret() {
+        return entityUserOperatorSecret;
     }
 
     public Secret clusterOperatorSecret() {
@@ -234,4 +241,19 @@ public class ClusterCa extends Ca {
             isMaintenanceTimeWindowsSatisfied);
     }
 
+    @Override
+    protected String caCertGenerationAnnotation() {
+        return ANNO_STRIMZI_IO_CLUSTER_CA_CERT_GENERATION;
+    }
+
+    @SuppressWarnings("BooleanExpressionComplexity")
+    @Override
+    protected boolean hasCaCertGenerationChanged() {
+        // at least one Secret has a different cluster CA certificate thumbprint.
+        // it is useful when a renewal cluster CA certificate process needs to be recovered after an operator crash
+        return hasCaCertGenerationChanged(zkNodesSecret) || hasCaCertGenerationChanged(brokersSecret) ||
+                hasCaCertGenerationChanged(entityTopicOperatorSecret) || hasCaCertGenerationChanged(entityUserOperatorSecret) ||
+                hasCaCertGenerationChanged(kafkaExporterSecret) || hasCaCertGenerationChanged(cruiseControlSecret) ||
+                hasCaCertGenerationChanged(clusterOperatorSecret);
+    }
 }

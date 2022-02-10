@@ -5,7 +5,6 @@
 package io.strimzi.operator.cluster.model;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.fabric8.kubernetes.api.model.Affinity;
@@ -79,10 +78,12 @@ import io.strimzi.api.kafka.model.status.Condition;
 import io.strimzi.api.kafka.model.storage.JbodStorage;
 import io.strimzi.api.kafka.model.storage.PersistentClaimStorage;
 import io.strimzi.api.kafka.model.storage.PersistentClaimStorageOverride;
+import io.strimzi.api.kafka.model.storage.SingleVolumeStorage;
 import io.strimzi.api.kafka.model.storage.Storage;
 import io.strimzi.api.kafka.model.template.IpFamily;
 import io.strimzi.api.kafka.model.template.IpFamilyPolicy;
 import io.strimzi.api.kafka.model.template.PodManagementPolicy;
+import io.strimzi.operator.cluster.ClusterOperatorConfig;
 import io.strimzi.operator.cluster.operator.resource.PodRevision;
 import io.strimzi.operator.common.MetricsAndLogging;
 import io.strimzi.operator.common.Annotations;
@@ -159,39 +160,36 @@ public abstract class AbstractModel {
     public static final String ANNO_STRIMZI_IO_STORAGE = Annotations.STRIMZI_DOMAIN + "storage";
     public static final String ANNO_STRIMZI_IO_DELETE_CLAIM = Annotations.STRIMZI_DOMAIN + "delete-claim";
 
-    private static final String ENV_VAR_HTTP_PROXY = "HTTP_PROXY";
-    private static final String ENV_VAR_HTTPS_PROXY = "HTTPS_PROXY";
-    private static final String ENV_VAR_NO_PROXY = "NO_PROXY";
-
     /**
-     * Configure HTTP/HTTPS Proxy env vars
-     * These are set in the Cluster Operator and then passed to all created containers
+     * Configure statically defined environment variables which are passed to all operands.
+     * This includes HTTP/HTTPS Proxy env vars or the FIPS_MODE.
      */
-    protected static final List<EnvVar> PROXY_ENV_VARS;
+    protected static final List<EnvVar> STATIC_ENV_VARS;
     static {
         List<EnvVar> envVars = new ArrayList<>(3);
 
-        if (System.getenv(ENV_VAR_HTTP_PROXY) != null)    {
-            envVars.add(buildEnvVar(ENV_VAR_HTTP_PROXY, System.getenv(ENV_VAR_HTTP_PROXY)));
+        if (System.getenv(ClusterOperatorConfig.HTTP_PROXY) != null)    {
+            envVars.add(buildEnvVar(ClusterOperatorConfig.HTTP_PROXY, System.getenv(ClusterOperatorConfig.HTTP_PROXY)));
         }
 
-        if (System.getenv(ENV_VAR_HTTPS_PROXY) != null)    {
-            envVars.add(buildEnvVar(ENV_VAR_HTTPS_PROXY, System.getenv(ENV_VAR_HTTPS_PROXY)));
+        if (System.getenv(ClusterOperatorConfig.HTTPS_PROXY) != null)    {
+            envVars.add(buildEnvVar(ClusterOperatorConfig.HTTPS_PROXY, System.getenv(ClusterOperatorConfig.HTTPS_PROXY)));
         }
 
-        if (System.getenv(ENV_VAR_NO_PROXY) != null)    {
-            envVars.add(buildEnvVar(ENV_VAR_NO_PROXY, System.getenv(ENV_VAR_NO_PROXY)));
+        if (System.getenv(ClusterOperatorConfig.NO_PROXY) != null)    {
+            envVars.add(buildEnvVar(ClusterOperatorConfig.NO_PROXY, System.getenv(ClusterOperatorConfig.NO_PROXY)));
+        }
+
+        if (System.getenv(ClusterOperatorConfig.FIPS_MODE) != null)    {
+            envVars.add(buildEnvVar(ClusterOperatorConfig.FIPS_MODE, System.getenv(ClusterOperatorConfig.FIPS_MODE)));
         }
 
         if (envVars.size() > 0) {
-            PROXY_ENV_VARS = Collections.unmodifiableList(envVars);
+            STATIC_ENV_VARS = Collections.unmodifiableList(envVars);
         } else {
-            PROXY_ENV_VARS = Collections.emptyList();
+            STATIC_ENV_VARS = Collections.emptyList();
         }
     }
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final TypeReference<Map<String, Object>> POD_TYPE = new TypeReference<>() { };
 
     protected final Reconciliation reconciliation;
     protected final String cluster;
@@ -227,6 +225,8 @@ public abstract class AbstractModel {
      */
     protected Storage storage;
     public static final String VOLUME_NAME = "data";
+    public static final String KAFKA_MOUNT_PATH = "/var/lib/kafka";
+    public static final String KAFKA_LOG_DIR = "kafka-log";
     protected String mountPath;
 
     /**
@@ -264,6 +264,8 @@ public abstract class AbstractModel {
      */
     protected Map<String, String> templateStatefulSetLabels;
     protected Map<String, String> templateStatefulSetAnnotations;
+    protected Map<String, String> templatePodSetLabels;
+    protected Map<String, String> templatePodSetAnnotations;
     protected Map<String, String> templateDeploymentLabels;
     protected Map<String, String> templateDeploymentAnnotations;
     protected io.strimzi.api.kafka.model.template.DeploymentStrategy templateDeploymentStrategy = io.strimzi.api.kafka.model.template.DeploymentStrategy.ROLLING_UPDATE;
@@ -660,7 +662,7 @@ public abstract class AbstractModel {
      */
     protected List<EnvVar> getRequiredEnvVars() {
         // HTTP Proxy configuration should be passed to all images
-        return PROXY_ENV_VARS;
+        return STATIC_ENV_VARS;
     }
 
     /**
@@ -876,6 +878,38 @@ public abstract class AbstractModel {
     }
 
     /**
+     * Creates list of PersistentVolumeClaims required by stateful deployments (Kafka and Zoo). This method calls itself
+     * recursively to handle volumes inside JBOD storage. When it calls itself to handle the volumes inside JBOD array,
+     * the {@code jbod} flag should be set to {@code true}. When called from outside, it should be set to {@code false}.
+     *
+     * @param storage   The storage configuration
+     * @param jbod      Indicator whether the {@code storage} is part of JBOD array or not
+     *
+     * @return          List with Persistent Volume Claims
+     */
+    protected List<PersistentVolumeClaim> createPersistentVolumeClaims(Storage storage, boolean jbod)   {
+        List<PersistentVolumeClaim> pvcs = new ArrayList<>();
+
+        if (storage != null) {
+            if (storage instanceof PersistentClaimStorage) {
+                PersistentClaimStorage persistentStorage = (PersistentClaimStorage) storage;
+                String pvcBaseName = VolumeUtils.createVolumePrefix(persistentStorage.getId(), jbod) + "-" + name;
+
+                for (int i = 0; i < replicas; i++) {
+                    pvcs.add(createPersistentVolumeClaim(i, pvcBaseName + "-" + i, persistentStorage));
+                }
+            } else if (storage instanceof JbodStorage) {
+                for (SingleVolumeStorage volume : ((JbodStorage) storage).getVolumes()) {
+                    // it's called recursively for setting the information from the current volume
+                    pvcs.addAll(createPersistentVolumeClaims(volume, true));
+                }
+            }
+        }
+
+        return pvcs;
+    }
+
+    /**
      * createPersistentVolumeClaim is called uniquely for each ordinal (Broker ID) of a stateful set
      *
      * @param ordinalId the ordinal of the pod/broker for which the persistent volume claim is being created
@@ -948,6 +982,10 @@ public abstract class AbstractModel {
 
     protected Secret createSecret(String name, Map<String, String> data) {
         return ModelUtils.createSecret(name, namespace, labels, createOwnerReference(), data, emptyMap(), emptyMap());
+    }
+
+    protected Secret createSecret(String name, Map<String, String> data, Map<String, String> customAnnotations) {
+        return ModelUtils.createSecret(name, namespace, labels, createOwnerReference(), data, customAnnotations, emptyMap());
     }
 
     protected Secret createJmxSecret(String name, Map<String, String> data) {
@@ -1134,15 +1172,15 @@ public abstract class AbstractModel {
                     imagePullSecrets,
                     isOpenShift);
 
-            pods.add(MAPPER.convertValue(pod, POD_TYPE));
+            pods.add(PodSetUtils.podToMap(pod));
         }
 
         return new StrimziPodSetBuilder()
                 .withNewMetadata()
                     .withName(name)
-                    .withLabels(getLabelsWithStrimziName(name, templateStatefulSetLabels).toMap())
+                    .withLabels(getLabelsWithStrimziName(name, templatePodSetLabels).toMap())
                     .withNamespace(namespace)
-                    .withAnnotations(Util.mergeLabelsOrAnnotations(setAnnotations, templateStatefulSetAnnotations))
+                    .withAnnotations(Util.mergeLabelsOrAnnotations(setAnnotations, templatePodSetAnnotations))
                     .withOwnerReferences(createOwnerReference())
                 .endMetadata()
                 .withNewSpec()

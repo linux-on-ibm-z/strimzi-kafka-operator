@@ -16,8 +16,8 @@ import io.strimzi.api.kafka.model.KafkaResources;
 import io.strimzi.operator.common.Annotations;
 import io.strimzi.operator.common.model.Labels;
 import io.strimzi.systemtest.AbstractST;
-import io.strimzi.systemtest.Constants;
 import io.strimzi.systemtest.annotations.ParallelNamespaceTest;
+import io.strimzi.systemtest.annotations.ParallelSuite;
 import io.strimzi.systemtest.resources.ResourceManager;
 import io.strimzi.systemtest.resources.crd.kafkaclients.KafkaBasicExampleClients;
 import io.strimzi.systemtest.templates.crd.KafkaConnectTemplates;
@@ -34,40 +34,30 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.strimzi.systemtest.Constants.INFRA_NAMESPACE;
 import static io.strimzi.systemtest.Constants.REGRESSION;
 import static io.strimzi.test.k8s.KubeClusterResource.kubeClient;
 
 @Tag(REGRESSION)
+@ParallelSuite
 public class ConfigProviderST extends AbstractST {
 
     private static final Logger LOGGER = LogManager.getLogger(ConfigProviderST.class);
 
+    private final String namespace = testSuiteNamespaceManager.getMapOfAdditionalNamespaces().get(ConfigProviderST.class.getSimpleName()).stream().findFirst().get();
+
     @ParallelNamespaceTest
-    void testConnectWithConnectorUsingConfigProvider(ExtensionContext extensionContext) {
+    void testConnectWithConnectorUsingConfigAndEnvProvider(ExtensionContext extensionContext) {
         final String clusterName = mapWithClusterNames.get(extensionContext.getDisplayName());
         final String topicName = mapWithTestTopics.get(extensionContext.getDisplayName());
-        final String namespaceName = StUtils.getNamespaceBasedOnRbac(INFRA_NAMESPACE, extensionContext);
+        final String namespaceName = StUtils.getNamespaceBasedOnRbac(namespace, extensionContext);
         final String producerName = "producer-" + ClientUtils.generateRandomConsumerGroup();
+        final String customFileSinkPath = "/tmp/my-own-path.txt";
 
         resourceManager.createResource(extensionContext, KafkaTemplates.kafkaEphemeral(clusterName, 3).build());
-        resourceManager.createResource(extensionContext, KafkaConnectTemplates.kafkaConnect(extensionContext, clusterName, 1, false)
-            .editOrNewMetadata()
-                .addToAnnotations(Annotations.STRIMZI_IO_USE_CONNECTOR_RESOURCES, "true")
-            .endMetadata()
-            .editOrNewSpec()
-                .addToConfig("key.converter.schemas.enable", false)
-                .addToConfig("value.converter.schemas.enable", false)
-                .addToConfig("key.converter", "org.apache.kafka.connect.storage.StringConverter")
-                .addToConfig("value.converter", "org.apache.kafka.connect.storage.StringConverter")
-                .addToConfig("config.providers", "configmaps")
-                .addToConfig("config.providers.configmaps.class", "io.strimzi.kafka.KubernetesConfigMapConfigProvider")
-            .endSpec()
-            .build());
 
         Map<String, String> configData = new HashMap<>();
         configData.put("topics", topicName);
-        configData.put("file", Constants.DEFAULT_SINK_FILE_PATH);
+        configData.put("file", customFileSinkPath);
         configData.put("key", "org.apache.kafka.connect.storage.StringConverter");
         configData.put("value", "org.apache.kafka.connect.storage.StringConverter");
 
@@ -82,6 +72,29 @@ public class ConfigProviderST extends AbstractST {
             .build();
 
         kubeClient().getClient().configMaps().inNamespace(namespaceName).create(connectorConfig);
+
+        resourceManager.createResource(extensionContext, KafkaConnectTemplates.kafkaConnect(extensionContext, clusterName, 1, false)
+            .editOrNewMetadata()
+                .addToAnnotations(Annotations.STRIMZI_IO_USE_CONNECTOR_RESOURCES, "true")
+            .endMetadata()
+            .editOrNewSpec()
+                .addToConfig("key.converter.schemas.enable", false)
+                .addToConfig("value.converter.schemas.enable", false)
+                .addToConfig("key.converter", "org.apache.kafka.connect.storage.StringConverter")
+                .addToConfig("value.converter", "org.apache.kafka.connect.storage.StringConverter")
+                .addToConfig("config.providers", "configmaps,env")
+                .addToConfig("config.providers.configmaps.class", "io.strimzi.kafka.KubernetesConfigMapConfigProvider")
+                .addToConfig("config.providers.env.class", "io.strimzi.kafka.EnvVarConfigProvider")
+                .editOrNewExternalConfiguration()
+                    .addNewEnv()
+                .withName("FILE_SINK_FILE")
+                .withNewValueFrom()
+                    .withNewConfigMapKeyRef("file", cmName, false)
+                .endValueFrom()
+                    .endEnv()
+                .endExternalConfiguration()
+            .endSpec()
+            .build());
 
         LOGGER.info("Creating needed RoleBinding and Role for Kubernetes Config Provider");
 
@@ -127,7 +140,7 @@ public class ConfigProviderST extends AbstractST {
         resourceManager.createResource(extensionContext, KafkaConnectorTemplates.kafkaConnector(clusterName)
             .editSpec()
                 .withClassName("org.apache.kafka.connect.file.FileStreamSinkConnector")
-                .addToConfig("file", "${" + configPrefix + "file}")
+                .addToConfig("file", "${env:FILE_SINK_FILE}")
                 .addToConfig("key.converter", "${" + configPrefix + "key}")
                 .addToConfig("value.converter", "${" + configPrefix + "value}")
                 .addToConfig("topics", "${" + configPrefix + "topics}")
@@ -145,7 +158,7 @@ public class ConfigProviderST extends AbstractST {
 
         resourceManager.createResource(extensionContext, kafkaBasicClientJob.producerStrimzi().build());
 
-        String kafkaConnectPodName = kubeClient().listPods(clusterName, Labels.STRIMZI_KIND_LABEL, KafkaConnect.RESOURCE_KIND).get(0).getMetadata().getName();
-        KafkaConnectUtils.waitForMessagesInKafkaConnectFileSink(namespaceName, kafkaConnectPodName, Constants.DEFAULT_SINK_FILE_PATH, "Hello-world - 99");
+        String kafkaConnectPodName = kubeClient().listPods(namespaceName, clusterName, Labels.STRIMZI_KIND_LABEL, KafkaConnect.RESOURCE_KIND).get(0).getMetadata().getName();
+        KafkaConnectUtils.waitForMessagesInKafkaConnectFileSink(namespaceName, kafkaConnectPodName, customFileSinkPath, "Hello-world - 99");
     }
 }

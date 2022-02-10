@@ -211,6 +211,40 @@ public class KafkaUpgradeDowngradeMockTest {
                 })));
     }
 
+    // Tests regular upgrade with the message format and protocol versions configured to the same Kafka
+    // version as we are upgrading from. IBPV and LMFV are configured to contain a "-IVx" suffix.
+    @Test
+    public void testUpgradeWithIVMessageAndProtocolVersions(VertxTestContext context)  {
+        String iv = "-IV0";
+        Kafka initialKafka = kafkaWithVersions(KafkaVersionTestUtils.PREVIOUS_KAFKA_VERSION,
+                KafkaVersionTestUtils.PREVIOUS_FORMAT_VERSION + iv,
+                KafkaVersionTestUtils.PREVIOUS_PROTOCOL_VERSION + iv);
+
+        Kafka updatedKafka = kafkaWithVersions(KafkaVersionTestUtils.LATEST_KAFKA_VERSION,
+                KafkaVersionTestUtils.PREVIOUS_FORMAT_VERSION + iv,
+                KafkaVersionTestUtils.PREVIOUS_PROTOCOL_VERSION + iv);
+
+        Checkpoint reconciliation = context.checkpoint();
+        initialize(context, initialKafka)
+                .onComplete(context.succeeding(v -> {
+                    context.verify(() -> {
+                        assertVersionsInStatefulSet(KafkaVersionTestUtils.PREVIOUS_KAFKA_VERSION,
+                                KafkaVersionTestUtils.PREVIOUS_FORMAT_VERSION + iv,
+                                KafkaVersionTestUtils.PREVIOUS_PROTOCOL_VERSION + iv,
+                                KafkaVersionTestUtils.PREVIOUS_KAFKA_IMAGE);
+                    });
+                }))
+                .compose(v -> operator.createOrUpdate(new Reconciliation("test-trigger", Kafka.RESOURCE_KIND, NAMESPACE, CLUSTER_NAME), updatedKafka))
+                .onComplete(context.succeeding(v -> context.verify(() -> {
+                    assertVersionsInStatefulSet(KafkaVersionTestUtils.LATEST_KAFKA_VERSION,
+                            KafkaVersionTestUtils.PREVIOUS_FORMAT_VERSION + iv,
+                            KafkaVersionTestUtils.PREVIOUS_PROTOCOL_VERSION + iv,
+                            KafkaVersionTestUtils.LATEST_KAFKA_IMAGE);
+
+                    reconciliation.flag();
+                })));
+    }
+
     // Tests recovery from failed upgrade with the message format and protocol versions configured to the same Kafka
     // version as we are upgrading from.
     @Test
@@ -313,86 +347,6 @@ public class KafkaUpgradeDowngradeMockTest {
                             KafkaVersionTestUtils.LATEST_FORMAT_VERSION,
                             KafkaVersionTestUtils.LATEST_PROTOCOL_VERSION,
                             KafkaVersionTestUtils.LATEST_KAFKA_IMAGE);
-
-                    reconciliation.flag();
-                })));
-    }
-
-    // Tests upgrade without the message format and protocol versions configured. With Kafka versions before 3.0.0, two
-    // rolling updates should happen => first with the old message and protocol versions and another one which rolls
-    // also protocol and message versions.
-    @Test
-    public void testUpgradeWithoutMessageAndProtocolVersionsBefore30(VertxTestContext context)  {
-        KafkaVersion unsupported = VERSIONS.version("2.7.0");
-        // The initial version uses 2.8 to create STS and Pods => the resources are modified later during the test
-        Kafka initialKafka = kafkaWithVersions("2.8.0");
-        Kafka updatedKafka = kafkaWithVersions("2.8.0");
-
-        Checkpoint reconciliation = context.checkpoint();
-        initialize(context, initialKafka)
-                .compose(v -> {
-                    // We have to fake the Kafka 2.7 version as deployed
-                    StatefulSet sts = client.apps().statefulSets().inNamespace(NAMESPACE).withName(CLUSTER_NAME + "-kafka").get();
-                    StatefulSet modifiedSts = new StatefulSetBuilder(sts)
-                            .editMetadata()
-                                .addToAnnotations(KafkaCluster.ANNO_STRIMZI_IO_KAFKA_VERSION, unsupported.version())
-                            .endMetadata()
-                            .editSpec()
-                                .editTemplate()
-                                    .editMetadata()
-                                        .addToAnnotations(KafkaCluster.ANNO_STRIMZI_IO_KAFKA_VERSION, unsupported.version())
-                                        .addToAnnotations(KafkaCluster.ANNO_STRIMZI_IO_LOG_MESSAGE_FORMAT_VERSION, unsupported.messageVersion())
-                                        .addToAnnotations(KafkaCluster.ANNO_STRIMZI_IO_INTER_BROKER_PROTOCOL_VERSION, unsupported.protocolVersion())
-                                    .endMetadata()
-                                    .editSpec()
-                                        .editContainer(0)
-                                            .withImage("strimzi/kafka:old-kafka-2.7.0")
-                                        .endContainer()
-                                    .endSpec()
-                                .endTemplate()
-                            .endSpec()
-                            .build();
-                    client.apps().statefulSets().inNamespace(NAMESPACE).withName(CLUSTER_NAME + "-kafka").createOrReplace(modifiedSts);
-
-                    for (int i = 0; i < 3; i++) {
-                        Pod pod = client.pods().inNamespace(NAMESPACE).withName(CLUSTER_NAME + "-kafka-" + i).get();
-                        Pod modifiedPod = new PodBuilder(pod)
-                                .editMetadata()
-                                    .addToAnnotations(KafkaCluster.ANNO_STRIMZI_IO_KAFKA_VERSION, unsupported.version())
-                                    .addToAnnotations(KafkaCluster.ANNO_STRIMZI_IO_LOG_MESSAGE_FORMAT_VERSION, unsupported.messageVersion())
-                                    .addToAnnotations(KafkaCluster.ANNO_STRIMZI_IO_INTER_BROKER_PROTOCOL_VERSION, unsupported.protocolVersion())
-                                .endMetadata()
-                                .editSpec()
-                                    .editContainer(0)
-                                        .withImage("strimzi/kafka:old-kafka-2.7.0")
-                                    .endContainer()
-                                .endSpec()
-                                .build();
-                        client.pods().inNamespace(NAMESPACE).withName(CLUSTER_NAME + "-kafka-" + i).createOrReplace(modifiedPod);
-                    }
-
-                    return Future.succeededFuture();
-                })
-                .compose(v -> operator.createOrUpdate(new Reconciliation("test-trigger", Kafka.RESOURCE_KIND, NAMESPACE, CLUSTER_NAME), updatedKafka))
-                .onComplete(context.succeeding(v -> context.verify(() -> {
-                    assertVersionsInStatefulSet("2.8.0",
-                            "2.7",
-                            "2.7",
-                            "strimzi/kafka:latest-kafka-2.8.0");
-                })))
-                .compose(v -> operator.createOrUpdate(new Reconciliation("test-trigger2", Kafka.RESOURCE_KIND, NAMESPACE, CLUSTER_NAME), updatedKafka))
-                .onComplete(context.succeeding(v -> context.verify(() -> {
-                    assertVersionsInStatefulSet("2.8.0",
-                            "2.7",
-                            "2.8",
-                            "strimzi/kafka:latest-kafka-2.8.0");
-                })))
-                .compose(v -> operator.createOrUpdate(new Reconciliation("test-trigger3", Kafka.RESOURCE_KIND, NAMESPACE, CLUSTER_NAME), updatedKafka))
-                .onComplete(context.succeeding(v -> context.verify(() -> {
-                    assertVersionsInStatefulSet("2.8.0",
-                            "2.8",
-                            "2.8",
-                            "strimzi/kafka:latest-kafka-2.8.0");
 
                     reconciliation.flag();
                 })));

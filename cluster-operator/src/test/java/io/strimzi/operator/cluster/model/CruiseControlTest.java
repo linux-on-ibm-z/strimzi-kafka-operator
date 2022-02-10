@@ -41,6 +41,7 @@ import io.strimzi.api.kafka.model.JmxPrometheusExporterMetricsBuilder;
 import io.strimzi.api.kafka.model.Kafka;
 import io.strimzi.api.kafka.model.KafkaBuilder;
 import io.strimzi.api.kafka.model.MetricsConfig;
+import io.strimzi.api.kafka.model.SystemPropertyBuilder;
 import io.strimzi.api.kafka.model.balancing.BrokerCapacity;
 import io.strimzi.api.kafka.model.storage.EphemeralStorage;
 import io.strimzi.api.kafka.model.storage.JbodStorage;
@@ -70,19 +71,13 @@ import static io.strimzi.operator.cluster.model.CruiseControl.API_HEALTHCHECK_PA
 import static io.strimzi.operator.cluster.model.CruiseControl.API_USER_NAME;
 import static io.strimzi.operator.cluster.model.CruiseControl.DEFAULT_WEBSERVER_SECURITY_ENABLED;
 import static io.strimzi.operator.cluster.model.CruiseControl.DEFAULT_WEBSERVER_SSL_ENABLED;
-import static io.strimzi.operator.cluster.model.CruiseControl.ENV_VAR_BROKER_CPU_UTILIZATION_CAPACITY;
-import static io.strimzi.operator.cluster.model.CruiseControl.ENV_VAR_BROKER_DISK_MIB_CAPACITY;
-import static io.strimzi.operator.cluster.model.CruiseControl.ENV_VAR_BROKER_INBOUND_NETWORK_KIB_PER_SECOND_CAPACITY;
-import static io.strimzi.operator.cluster.model.CruiseControl.ENV_VAR_BROKER_OUTBOUND_NETWORK_KIB_PER_SECOND_CAPACITY;
+import static io.strimzi.operator.cluster.model.CruiseControl.ENV_VAR_CRUISE_CONTROL_CAPACITY_CONFIGURATION;
 import static io.strimzi.operator.cluster.operator.resource.cruisecontrol.CruiseControlConfigurationParameters.CRUISE_CONTROL_ANOMALY_DETECTION_CONFIG_KEY;
 import static io.strimzi.operator.cluster.operator.resource.cruisecontrol.CruiseControlConfigurationParameters.CRUISE_CONTROL_DEFAULT_GOALS_CONFIG_KEY;
-import static io.strimzi.operator.cluster.model.cruisecontrol.Capacity.DEFAULT_BROKER_CPU_UTILIZATION_CAPACITY;
-import static io.strimzi.operator.cluster.model.cruisecontrol.Capacity.DEFAULT_BROKER_DISK_MIB_CAPACITY;
-import static io.strimzi.operator.cluster.model.cruisecontrol.Capacity.DEFAULT_BROKER_INBOUND_NETWORK_KIB_PER_SECOND_CAPACITY;
-import static io.strimzi.operator.cluster.model.cruisecontrol.Capacity.DEFAULT_BROKER_OUTBOUND_NETWORK_KIB_PER_SECOND_CAPACITY;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
@@ -147,12 +142,18 @@ public class CruiseControlTest {
             .endTemplate()
             .build();
 
-    private final CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, createKafka(cruiseControlSpec), VERSIONS);
+    private final CruiseControl cc = createCruiseControl(createKafka(cruiseControlSpec));
+
+    private CruiseControl createCruiseControl(Kafka kafkaAssembly) {
+        return CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, kafkaAssembly, VERSIONS, kafkaAssembly.getSpec().getKafka().getStorage());
+    }
+
     private Kafka createKafka(CruiseControlSpec cruiseControlSpec) {
         return new KafkaBuilder(ResourceUtils.createKafka(namespace, cluster, replicas, image, healthDelay, healthTimeout))
                 .editSpec()
                     .editKafka()
                         .withConfig(kafkaConfig)
+                        .withStorage(kafkaStorage)
                    .endKafka()
                   .withCruiseControl(cruiseControlSpec)
                 .endSpec()
@@ -182,12 +183,9 @@ public class CruiseControlTest {
         List<EnvVar> expected = new ArrayList<>();
         expected.add(new EnvVarBuilder().withName(CruiseControl.ENV_VAR_CRUISE_CONTROL_METRICS_ENABLED).withValue(Boolean.toString(CruiseControl.DEFAULT_CRUISE_CONTROL_METRICS_ENABLED)).build());
         expected.add(new EnvVarBuilder().withName(CruiseControl.ENV_VAR_STRIMZI_KAFKA_BOOTSTRAP_SERVERS).withValue(CruiseControl.defaultBootstrapServers(cluster)).build());
-        expected.add(new EnvVarBuilder().withName(KafkaMirrorMakerCluster.ENV_VAR_STRIMZI_KAFKA_GC_LOG_ENABLED).withValue(Boolean.toString(AbstractModel.DEFAULT_JVM_GC_LOGGING_ENABLED)).build());
+        expected.add(new EnvVarBuilder().withName(CruiseControl.ENV_VAR_STRIMZI_KAFKA_GC_LOG_ENABLED).withValue(Boolean.toString(AbstractModel.DEFAULT_JVM_GC_LOGGING_ENABLED)).build());
         expected.add(new EnvVarBuilder().withName(CruiseControl.ENV_VAR_MIN_INSYNC_REPLICAS).withValue(minInsyncReplicas).build());
-        expected.add(new EnvVarBuilder().withName(ENV_VAR_BROKER_DISK_MIB_CAPACITY).withValue(Double.toString(DEFAULT_BROKER_DISK_MIB_CAPACITY)).build());
-        expected.add(new EnvVarBuilder().withName(ENV_VAR_BROKER_CPU_UTILIZATION_CAPACITY).withValue(Integer.toString(DEFAULT_BROKER_CPU_UTILIZATION_CAPACITY)).build());
-        expected.add(new EnvVarBuilder().withName(ENV_VAR_BROKER_INBOUND_NETWORK_KIB_PER_SECOND_CAPACITY).withValue(Double.toString(DEFAULT_BROKER_INBOUND_NETWORK_KIB_PER_SECOND_CAPACITY)).build());
-        expected.add(new EnvVarBuilder().withName(ENV_VAR_BROKER_OUTBOUND_NETWORK_KIB_PER_SECOND_CAPACITY).withValue(Double.toString(DEFAULT_BROKER_OUTBOUND_NETWORK_KIB_PER_SECOND_CAPACITY)).build());
+        expected.add(new EnvVarBuilder().withName(ENV_VAR_CRUISE_CONTROL_CAPACITY_CONFIGURATION).withValue(cc.capacity.generateCapacityConfig()).build());
         expected.add(new EnvVarBuilder().withName(CruiseControl.ENV_VAR_API_SSL_ENABLED).withValue(Boolean.toString(DEFAULT_WEBSERVER_SSL_ENABLED)).build());
         expected.add(new EnvVarBuilder().withName(CruiseControl.ENV_VAR_API_AUTH_ENABLED).withValue(Boolean.toString(DEFAULT_WEBSERVER_SECURITY_ENABLED)).build());
         expected.add(new EnvVarBuilder().withName(CruiseControl.ENV_VAR_API_USER).withValue(API_USER_NAME).build());
@@ -200,7 +198,7 @@ public class CruiseControlTest {
     }
 
     public String getCapacityConfigurationFromEnvVar(Kafka resource, String envVar) {
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
         Deployment dep = cc.generateDeployment(true, null, null, null);
         List<Container> containers = dep.getSpec().getTemplate().getSpec().getContainers();
 
@@ -227,11 +225,9 @@ public class CruiseControlTest {
 
         Kafka resource = createKafka(cruiseControlSpec);
 
-        Capacity generatedCapacity = new Capacity(resource.getSpec());
-        assertThat(getCapacityConfigurationFromEnvVar(resource, ENV_VAR_BROKER_DISK_MIB_CAPACITY), is(Double.toString(generatedCapacity.getDiskMiB())));
-        assertThat(getCapacityConfigurationFromEnvVar(resource, ENV_VAR_BROKER_CPU_UTILIZATION_CAPACITY), is(Integer.toString(generatedCapacity.getCpuUtilization())));
-        assertThat(getCapacityConfigurationFromEnvVar(resource, ENV_VAR_BROKER_INBOUND_NETWORK_KIB_PER_SECOND_CAPACITY), is(Double.toString(generatedCapacity.getInboundNetworkKiBPerSecond())));
-        assertThat(getCapacityConfigurationFromEnvVar(resource, ENV_VAR_BROKER_OUTBOUND_NETWORK_KIB_PER_SECOND_CAPACITY), is(Double.toString(generatedCapacity.getOutboundNetworkKiBPerSecond())));
+        Capacity capacity = new Capacity(resource.getSpec(), kafkaStorage);
+
+        assertThat(getCapacityConfigurationFromEnvVar(resource, ENV_VAR_CRUISE_CONTROL_CAPACITY_CONFIGURATION), is(capacity.generateCapacityConfig()));
 
         // Test generated disk capacity
         JbodStorage jbodStorage = new JbodStorage();
@@ -244,7 +240,6 @@ public class CruiseControlTest {
 
         PersistentClaimStorage p2 = new PersistentClaimStorage();
         p2.setId(1);
-        p2.setSize("50G");
         volumes.add(p2);
 
         jbodStorage.setVolumes(volumes);
@@ -258,9 +253,9 @@ public class CruiseControlTest {
                 .withCruiseControl(cruiseControlSpec)
             .endSpec()
             .build();
-
-        generatedCapacity = new Capacity(resource.getSpec());
-        assertThat(getCapacityConfigurationFromEnvVar(resource, ENV_VAR_BROKER_DISK_MIB_CAPACITY), is(Double.toString(generatedCapacity.getDiskMiB())));
+        
+        capacity = new Capacity(resource.getSpec(), jbodStorage);
+        assertThat(getCapacityConfigurationFromEnvVar(resource, ENV_VAR_CRUISE_CONTROL_CAPACITY_CONFIGURATION), is(capacity.generateCapacityConfig()));
     }
 
     @ParallelTest
@@ -403,7 +398,7 @@ public class CruiseControlTest {
                 .build();
 
         Kafka resource = createKafka(cruiseControlSpec);
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
         List<EnvVar> envVarList = cc.getEnvVars();
 
         assertThat(envVarList, hasItems(new EnvVar(testEnvOneKey, testEnvOneValue, null)));
@@ -434,7 +429,7 @@ public class CruiseControlTest {
                 .build();
 
         Kafka resource = createKafka(cruiseControlSpec);
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
         List<EnvVar> envVarList = cc.getEnvVars();
 
         assertThat(envVarList, hasItems(new EnvVar(testEnvOneKey, testEnvOneValue, null)));
@@ -444,7 +439,7 @@ public class CruiseControlTest {
     @ParallelTest
     public void testCruiseControlNotDeployed() {
         Kafka resource = createKafka(null);
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
 
         try {
             assertThat(cc.generateDeployment(true, null, null, null), is(nullValue()));
@@ -475,7 +470,7 @@ public class CruiseControlTest {
     @ParallelTest
     public void testGenerateServiceWhenDisabled()   {
         Kafka resource = createKafka(null);
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
 
         assertThrows(NullPointerException.class, () -> cc.generateService());
     }
@@ -562,7 +557,7 @@ public class CruiseControlTest {
                 .build();
 
         Kafka resource = createKafka(cruiseControlSpec);
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
 
         // Check Deployment
         Deployment dep = cc.generateDeployment(true, depAnots, null, null);
@@ -608,7 +603,7 @@ public class CruiseControlTest {
 
         Kafka resource = createKafka(cruiseControlSpec);
 
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
         Deployment dep = cc.generateDeployment(true,  null, null, null);
         List<Container> containers = dep.getSpec().getTemplate().getSpec().getContainers();
         Container ccContainer = containers.stream().filter(container -> ccImage.equals(container.getImage())).findFirst().orElseThrow();
@@ -634,7 +629,7 @@ public class CruiseControlTest {
 
         Kafka resource = createKafka(cruiseControlSpec);
 
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
         Deployment dep = cc.generateDeployment(true, null, null, null);
         List<Container> containers = dep.getSpec().getTemplate().getSpec().getContainers();
         Container ccContainer = containers.stream().filter(container -> ccImage.equals(container.getImage())).findFirst().orElseThrow();
@@ -672,7 +667,7 @@ public class CruiseControlTest {
 
         Kafka resource = createKafka(cruiseControlSpec);
 
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
         Deployment dep = cc.generateDeployment(true, null, null, null);
         List<Container> containers = dep.getSpec().getTemplate().getSpec().getContainers();
 
@@ -700,7 +695,7 @@ public class CruiseControlTest {
 
         Kafka resource = createKafka(cruiseControlSpec);
 
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
         Deployment dep = cc.generateDeployment(true, null, null, null);
         List<Container> containers = dep.getSpec().getTemplate().getSpec().getContainers();
 
@@ -727,13 +722,44 @@ public class CruiseControlTest {
 
         Kafka resource = createKafka(cruiseControlSpec);
 
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
 
         Deployment dep = cc.generateDeployment(true, null, null, null);
         assertThat(dep.getSpec().getTemplate().getSpec().getSecurityContext(), is(notNullValue()));
         assertThat(dep.getSpec().getTemplate().getSpec().getSecurityContext().getFsGroup(), is(Long.valueOf(123)));
         assertThat(dep.getSpec().getTemplate().getSpec().getSecurityContext().getRunAsGroup(), is(Long.valueOf(456)));
         assertThat(dep.getSpec().getTemplate().getSpec().getSecurityContext().getRunAsUser(), is(Long.valueOf(789)));
+    }
+
+    @ParallelTest
+    public void testJvmOptions() {
+        CruiseControlSpec cruiseControlSpec = new CruiseControlSpecBuilder()
+                .withNewJvmOptions()
+                .withXms("128m")
+                .withXmx("256m")
+                .withXx(Map.of("InitiatingHeapOccupancyPercent", "36"))
+                .withJavaSystemProperties(new SystemPropertyBuilder().withName("myProperty").withValue("myValue").build(),
+                        new SystemPropertyBuilder().withName("myProperty2").withValue("myValue2").build())
+                .endJvmOptions()
+                .build();
+
+        Kafka resource = createKafka(cruiseControlSpec);
+
+        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS, kafkaStorage);
+
+        EnvVar systemProps = cc.getEnvVars().stream().filter(var -> AbstractModel.ENV_VAR_STRIMZI_JAVA_SYSTEM_PROPERTIES.equals(var.getName())).findFirst().orElse(null);
+        assertThat(systemProps, is(notNullValue()));
+        assertThat(systemProps.getValue(), containsString("-DmyProperty=myValue"));
+        assertThat(systemProps.getValue(), containsString("-DmyProperty2=myValue2"));
+
+        EnvVar heapOpts = cc.getEnvVars().stream().filter(var -> AbstractModel.ENV_VAR_KAFKA_HEAP_OPTS.equals(var.getName())).findFirst().orElse(null);
+        assertThat(heapOpts, is(notNullValue()));
+        assertThat(heapOpts.getValue(), containsString("-Xms128m"));
+        assertThat(heapOpts.getValue(), containsString("-Xmx256m"));
+
+        EnvVar perfOptions = cc.getEnvVars().stream().filter(var -> AbstractModel.ENV_VAR_KAFKA_JVM_PERFORMANCE_OPTS.equals(var.getName())).findFirst().orElse(null);
+        assertThat(perfOptions, is(notNullValue()));
+        assertThat(perfOptions.getValue(), containsString("-XX:InitiatingHeapOccupancyPercent=36"));
     }
 
     @ParallelTest
@@ -766,7 +792,7 @@ public class CruiseControlTest {
 
         Kafka resource = createKafka(cruiseControlSpec);
 
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
 
         Deployment dep = cc.generateDeployment(true, null, null, null);
 
@@ -801,7 +827,7 @@ public class CruiseControlTest {
 
         Kafka resource = createKafka(cruiseControlSpec);
 
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resource, VERSIONS);
+        CruiseControl cc = createCruiseControl(resource);
 
         Deployment dep = cc.generateDeployment(true, null, null, null);
 
@@ -886,7 +912,7 @@ public class CruiseControlTest {
 
         Kafka resourceWithCustomGoals = createKafka(cruiseControlSpec);
 
-        CruiseControl cruiseControlWithCustomGoals = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, resourceWithCustomGoals, VERSIONS);
+        CruiseControl cruiseControlWithCustomGoals = createCruiseControl(resourceWithCustomGoals);
 
         String anomalyDetectionGoals =  cruiseControlWithCustomGoals
                 .getConfiguration().asOrderedProperties().asMap()
@@ -908,7 +934,7 @@ public class CruiseControlTest {
                 .build();
 
         Kafka kafkaAssembly = createKafka(cruiseControlSpec);
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, kafkaAssembly, VERSIONS);
+        CruiseControl cc = createCruiseControl(kafkaAssembly);
 
         assertThat(cc.isMetricsEnabled(), is(true));
         assertThat(cc.getMetricsConfigInCm(), is(metrics));
@@ -919,7 +945,7 @@ public class CruiseControlTest {
         CruiseControlSpec cruiseControlSpec = new CruiseControlSpecBuilder().build();
         Kafka kafkaAssembly = createKafka(cruiseControlSpec);
 
-        CruiseControl cc = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, kafkaAssembly, VERSIONS);
+        CruiseControl cc = createCruiseControl(kafkaAssembly);
 
         assertThat(cc.isMetricsEnabled(), is(false));
         assertThat(cc.getMetricsConfigInCm(), is(nullValue()));

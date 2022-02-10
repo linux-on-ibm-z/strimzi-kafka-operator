@@ -6,11 +6,8 @@ package io.strimzi.api.kafka.model;
 
 import io.strimzi.test.TestUtils;
 import io.strimzi.test.k8s.exceptions.KubeClusterException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.allOf;
@@ -27,9 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * validation done by K8S.
  */
 public class KafkaBridgeCrdIT extends AbstractCrdIT {
-
-    private static final Logger LOGGER = LogManager.getLogger(KafkaBridgeCrdIT.class);
-
     public static final String NAMESPACE = "kafkabridge-crd-it";
 
     @Test
@@ -64,7 +58,7 @@ public class KafkaBridgeCrdIT extends AbstractCrdIT {
     @Test
     void testKafkaBridgeWithTlsAuthWithMissingRequired() {
         Throwable exception = assertThrows(
-            KubeClusterException.InvalidResource.class,
+            KubeClusterException.class,
             () -> createDeleteCustomResource("KafkaBridge-with-tls-auth-with-missing-required.yaml"));
 
         assertMissingRequiredPropertiesMessage(exception.getMessage(), "spec.authentication.certificateAndKey.certificate",
@@ -100,7 +94,7 @@ public class KafkaBridgeCrdIT extends AbstractCrdIT {
     @Test
     void testCreateKafkaBridgeWithWrongTracingType() {
         Throwable exception = assertThrows(
-            KubeClusterException.InvalidResource.class,
+            KubeClusterException.class,
             () -> createDeleteCustomResource("KafkaBridge-with-wrong-tracing-type.yaml"));
 
         assertThat(exception.getMessage(), anyOf(
@@ -108,9 +102,8 @@ public class KafkaBridgeCrdIT extends AbstractCrdIT {
                 containsStringIgnoringCase("spec.tracing.type: Unsupported value: \"wrongtype\": supported values: \"jaeger\"")));
     }
 
-    @Disabled("See https://github.com/strimzi/strimzi-kafka-operator/issues/4606")
     @Test
-    void testCreateKafkaBridgeWithExtraProperty() {
+    void testKafkaBridgeWithExtraProperty() {
         Throwable exception = assertThrows(
             KubeClusterException.class,
             () -> createDeleteCustomResource("KafkaBridge-with-extra-property.yaml"));
@@ -134,9 +127,15 @@ public class KafkaBridgeCrdIT extends AbstractCrdIT {
 
     @BeforeAll
     void setupEnvironment() throws InterruptedException {
-        cluster.createNamespace(NAMESPACE);
         cluster.createCustomResources(TestUtils.CRD_KAFKA_BRIDGE);
         cluster.waitForCustomResourceDefinition("kafkabridges.kafka.strimzi.io");
+        cluster.createNamespace(NAMESPACE);
+
+        try {
+            Thread.sleep(1_000L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @AfterAll

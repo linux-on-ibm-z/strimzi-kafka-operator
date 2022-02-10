@@ -68,7 +68,14 @@ if [ -n "$STRIMZI_JAVA_SYSTEM_PROPERTIES" ]; then
     export KAFKA_OPTS="${KAFKA_OPTS} ${STRIMZI_JAVA_SYSTEM_PROPERTIES}"
 fi
 
+# Disable FIPS if needed
+if [ "$FIPS_MODE" = "disabled" ]; then
+    export KAFKA_OPTS="${KAFKA_OPTS} -Dcom.redhat.fips=false"
+fi
+
 . ./set_kafka_gc_options.sh
+
+set -x
 
 # starting Kafka server with final configuration
 exec /usr/bin/tini -w -e 143 -- "${KAFKA_HOME}/bin/connect-distributed.sh" /tmp/strimzi-connect.properties

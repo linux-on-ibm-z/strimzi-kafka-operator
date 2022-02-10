@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+set +x
 
 EXEC="-jar $JAR_FILE -e -j $JSON_DIR -s $SECONDS_BETWEEN_RUNS -c $CONTINUE_ON_ERROR $ADDITIONAL_JARS_OPTS"
 GC_OPTS="-Xms${HEAP_SIZE}m -Xmx${HEAP_SIZE}m -XX:PermSize=${PERM_SIZE}m -XX:MaxPermSize=${MAX_PERM_SIZE}m"
@@ -7,6 +8,11 @@ JMXTRANS_OPTS="$JMXTRANS_OPTS -Dlog4j2.configurationFile=file:///${JMXTRANS_HOME
 
 if [ -n "${KAFKA_JMX_USERNAME}" ]; then
   JMXTRANS_OPTS="$JMXTRANS_OPTS -Dkafka.username=${KAFKA_JMX_USERNAME} -Dkafka.password=${KAFKA_JMX_PASSWORD}"
+fi
+
+# Disable FIPS if needed
+if [ "$FIPS_MODE" = "disabled" ]; then
+    JAVA_OPTS="${JAVA_OPTS} -Dcom.redhat.fips=false"
 fi
 
 MONITOR_OPTS="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false \

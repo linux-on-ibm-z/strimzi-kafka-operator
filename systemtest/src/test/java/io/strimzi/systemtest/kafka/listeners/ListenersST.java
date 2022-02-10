@@ -21,12 +21,9 @@ import io.strimzi.api.kafka.model.status.ListenerAddress;
 import io.strimzi.api.kafka.model.status.ListenerStatus;
 import io.strimzi.operator.common.model.Labels;
 import io.strimzi.systemtest.AbstractST;
-import io.strimzi.systemtest.BeforeAllOnce;
 import io.strimzi.systemtest.Constants;
-import io.strimzi.systemtest.Environment;
-import io.strimzi.systemtest.annotations.IsolatedSuite;
+import io.strimzi.systemtest.annotations.ParallelSuite;
 import io.strimzi.systemtest.kafkaclients.externalClients.ExternalKafkaClient;
-import io.strimzi.systemtest.resources.operator.SetupClusterOperator;
 import io.strimzi.systemtest.annotations.OpenShiftOnly;
 import io.strimzi.systemtest.annotations.ParallelNamespaceTest;
 import io.strimzi.systemtest.kafkaclients.internalClients.InternalKafkaClient;
@@ -51,7 +48,6 @@ import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -90,7 +86,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag(REGRESSION)
-@IsolatedSuite
+@ParallelSuite
 public class ListenersST extends AbstractST {
     private static final Logger LOGGER = LogManager.getLogger(ListenersST.class);
 
@@ -389,6 +385,67 @@ public class ListenersST extends AbstractST {
         assertThat(serviceDiscoveryArray, is(StUtils.expectedServiceDiscoveryInfo(9096, "kafka", "scram-sha-512", true)));
     }
 
+    /**
+     * Test custom listener configured with scram sha auth and tls.
+     */
+    @ParallelNamespaceTest
+    @Tag(ACCEPTANCE)
+    @Tag(INTERNAL_CLIENTS_USED)
+    void testSendMessagesCustomListenerTlsScramSha(ExtensionContext extensionContext) {
+        final String namespaceName = StUtils.getNamespaceBasedOnRbac(INFRA_NAMESPACE, extensionContext);
+        final String clusterName = mapWithClusterNames.get(extensionContext.getDisplayName());
+        final String topicName = mapWithTestTopics.get(extensionContext.getDisplayName());
+        final String kafkaUsername = mapWithTestUsers.get(extensionContext.getDisplayName());
+
+        // Use a Kafka with plain listener disabled
+        resourceManager.createResource(extensionContext, KafkaTemplates.kafkaEphemeral(clusterName, 3)
+                .editSpec()
+                .editKafka()
+                .withListeners(new GenericKafkaListenerBuilder()
+                        .withType(KafkaListenerType.INTERNAL)
+                        .withName(Constants.TLS_LISTENER_DEFAULT_NAME)
+                        .withPort(9122)
+                        .withTls(true)
+                        .withNewKafkaListenerAuthenticationCustomAuth()
+                        .withSasl(true)
+                        .withListenerConfig(Map.of("scram-sha-512.sasl.jaas.config",
+                                "org.apache.kafka.common.security.scram.ScramLoginModule required;",
+                                "sasl.enabled.mechanisms", "SCRAM-SHA-512"))
+                        .endKafkaListenerAuthenticationCustomAuth()
+                        .build())
+                .endKafka()
+                .endSpec()
+                .build());
+
+        resourceManager.createResource(extensionContext, KafkaTopicTemplates.topic(clusterName, topicName).build());
+
+        KafkaUser kafkaUser = KafkaUserTemplates.scramShaUser(clusterName, kafkaUsername).build();
+
+        resourceManager.createResource(extensionContext, kafkaUser);
+        resourceManager.createResource(extensionContext, KafkaClientsTemplates.kafkaClients(namespaceName, true, clusterName + "-" + Constants.KAFKA_CLIENTS, kafkaUser).build());
+
+        final String kafkaClientsPodName =
+                kubeClient(namespaceName).listPodsByPrefixInName(namespaceName, clusterName + "-" + Constants.KAFKA_CLIENTS).get(0).getMetadata().getName();
+
+        InternalKafkaClient internalKafkaClient = new InternalKafkaClient.Builder()
+                .withUsingPodName(kafkaClientsPodName)
+                .withTopicName(topicName)
+                .withNamespaceName(namespaceName)
+                .withClusterName(clusterName)
+                .withKafkaUsername(kafkaUsername)
+                .withMessageCount(MESSAGE_COUNT)
+                .withListenerName(Constants.TLS_LISTENER_DEFAULT_NAME)
+                .build();
+
+        // Check brokers availability
+        LOGGER.info("Checking produced and consumed messages to pod:{}", kafkaClientsPodName);
+
+        internalKafkaClient.checkProducedAndConsumedMessages(
+                internalKafkaClient.sendMessagesTls(),
+                internalKafkaClient.receiveMessagesTls()
+        );
+    }
+
     @ParallelNamespaceTest
     @Tag(NODEPORT_SUPPORTED)
     @Tag(EXTERNAL_CLIENTS_USED)
@@ -448,7 +505,7 @@ public class ListenersST extends AbstractST {
                 List<Integer> listStatusPorts = listenerStatus.getAddresses().stream().map(ListenerAddress::getPort).collect(Collectors.toList());
                 Integer nodePort = kubeClient(namespaceName).getService(namespaceName, KafkaResources.externalBootstrapServiceName(clusterName)).getSpec().getPorts().get(0).getNodePort();
 
-                List<String> nodeIps = kubeClient(namespaceName).listPods(kubeClient(namespaceName).getStatefulSet(namespaceName, KafkaResources.kafkaStatefulSetName(clusterName)).getMetadata().getLabels())
+                List<String> nodeIps = kubeClient(namespaceName).listPods(KafkaResource.getLabelSelector(clusterName, KafkaResources.kafkaStatefulSetName(clusterName)))
                         .stream().map(pods -> pods.getStatus().getHostIP()).distinct().collect(Collectors.toList());
                 nodeIps.sort(Comparator.comparing(String::toString));
 
@@ -1369,10 +1426,10 @@ public class ListenersST extends AbstractST {
         kafkaSnapshot = RollingUpdateUtils.waitTillComponentHasRolled(namespaceName, kafkaSelector, 3, kafkaSnapshot);
 
         externalCerts = getKafkaStatusCertificates(Constants.EXTERNAL_LISTENER_DEFAULT_NAME, namespaceName, clusterName);
-        externalSecretCerts = getKafkaSecretCertificates(clusterCustomCertServer1, "ca.crt");
+        externalSecretCerts = getKafkaSecretCertificates(namespaceName, clusterCustomCertServer1, "ca.crt");
 
         internalCerts = getKafkaStatusCertificates(Constants.TLS_LISTENER_DEFAULT_NAME, namespaceName, clusterName);
-        internalSecretCerts = getKafkaSecretCertificates(clusterCustomCertServer2, "ca.crt");
+        internalSecretCerts = getKafkaSecretCertificates(namespaceName, clusterCustomCertServer2, "ca.crt");
 
         LOGGER.info("Check if KafkaStatus certificates are the same as secret certificates");
         assertThat(externalSecretCerts, is(externalCerts));
@@ -2160,7 +2217,7 @@ public class ListenersST extends AbstractST {
         SecretUtils.waitForUserPasswordChange(namespaceName, userName, secondEncodedPassword);
 
         LOGGER.info("We need to recreate Kafka Clients deployment, so the correct password from secret will be taken");
-        resourceManager.deleteResource(kubeClient().getDeployment(kafkaClientsName));
+        resourceManager.deleteResource(kubeClient().getDeployment(namespaceName, kafkaClientsName));
         resourceManager.createResource(extensionContext, KafkaClientsTemplates.kafkaClients(namespaceName, true, kafkaClientsName, kafkaUser).build());
 
         LOGGER.info("Receiving messages with new password");
@@ -2284,20 +2341,6 @@ public class ListenersST extends AbstractST {
             assertThat(certificate.toString(), containsString(advertHostInternalList.get(index)));
             assertThat(certificate.toString(), containsString(advertHostExternalList.get(index++)));
         }
-    }
-
-    @BeforeAll
-    void setup(ExtensionContext extensionContext) {
-        final String namespaceToWatch = Environment.isNamespaceRbacScope() ? INFRA_NAMESPACE : Constants.WATCH_ALL_NAMESPACES;
-
-        install.unInstall();
-        install = new SetupClusterOperator.SetupClusterOperatorBuilder()
-            .withExtensionContext(BeforeAllOnce.getSharedExtensionContext())
-            .withNamespace(INFRA_NAMESPACE)
-            .withWatchingNamespaces(namespaceToWatch)
-            .withOperationTimeout(Constants.CO_OPERATION_TIMEOUT_SHORT)
-            .createInstallation()
-            .runInstallation();
     }
 
     @AfterEach

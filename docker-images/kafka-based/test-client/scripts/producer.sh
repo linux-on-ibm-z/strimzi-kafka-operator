@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -x
+set +x
 
 # Defaults
 CONFIG_REGEX="USER=([A-Za-z0-9\_]*)"
@@ -48,6 +48,11 @@ ssl.keystore.password=${CERTS_STORE_PASSWORD}"
 ssl.truststore.password=${CERTS_STORE_PASSWORD}"
   fi
   ./kafka_tls_prepare_certificates.sh "${USER}"
+fi
+
+# Disable FIPS if needed
+if [ "$FIPS_MODE" = "disabled" ]; then
+    KAFKA_OPTS="${KAFKA_OPTS} -Dcom.redhat.fips=false"
 fi
 
 PROPERTIES_FILE="/tmp/${USER}.properties"

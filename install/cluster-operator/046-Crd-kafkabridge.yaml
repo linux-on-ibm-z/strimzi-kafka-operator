@@ -222,14 +222,16 @@ spec:
                     type: string
                     enum:
                     - tls
+                    - scram-sha-256
                     - scram-sha-512
                     - plain
                     - oauth
                     description: Authentication type. Currently the only supported
-                      types are `tls`, `scram-sha-512`, and `plain`. `scram-sha-512`
-                      type uses SASL SCRAM-SHA-512 Authentication. `plain` type uses
-                      SASL PLAIN Authentication. `oauth` type uses SASL OAUTHBEARER
-                      Authentication. The `tls` type uses TLS Client Authentication.
+                      types are `tls`, `scram-sha-256`, `scram-sha-512`, and `plain`.
+                      `scram-sha-256` and `scram-sha-512` types use SASL SCRAM-SHA-256
+                      and SASL SCRAM-SHA-512 Authentication, respectively. `plain`
+                      type uses SASL PLAIN Authentication. `oauth` type uses SASL
+                      OAUTHBEARER Authentication. The `tls` type uses TLS Client Authentication.
                       The `tls` type is supported only over TLS connections.
                   username:
                     type: string
@@ -1003,7 +1005,7 @@ spec:
                             description: Annotations added to the resource template.
                               Can be applied to different resources such as `StatefulSets`,
                               `Deployments`, `Pods`, and `Services`.
-                        description: Metadata to apply to the `PodDistruptionBugetTemplate`
+                        description: Metadata to apply to the `PodDisruptionBudgetTemplate`
                           resource.
                       maxUnavailable:
                         type: integer

@@ -57,13 +57,12 @@ import io.strimzi.api.kafka.model.Logging;
 import io.strimzi.api.kafka.model.Probe;
 import io.strimzi.api.kafka.model.ProbeBuilder;
 import io.strimzi.api.kafka.model.Rack;
+import io.strimzi.api.kafka.model.StrimziPodSet;
+import io.strimzi.api.kafka.model.listener.KafkaListenerAuthenticationCustom;
 import io.strimzi.api.kafka.model.listener.KafkaListenerAuthenticationOAuth;
 import io.strimzi.api.kafka.model.listener.arraylistener.GenericKafkaListener;
 import io.strimzi.api.kafka.model.listener.arraylistener.KafkaListenerType;
 import io.strimzi.api.kafka.model.status.Condition;
-import io.strimzi.api.kafka.model.storage.JbodStorage;
-import io.strimzi.api.kafka.model.storage.PersistentClaimStorage;
-import io.strimzi.api.kafka.model.storage.SingleVolumeStorage;
 import io.strimzi.api.kafka.model.storage.Storage;
 import io.strimzi.api.kafka.model.template.ExternalTrafficPolicy;
 import io.strimzi.api.kafka.model.template.KafkaClusterTemplate;
@@ -92,6 +91,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static io.strimzi.operator.cluster.model.ListenersUtils.isListenerWithCustomAuth;
 import static io.strimzi.operator.cluster.model.ListenersUtils.isListenerWithOAuth;
 import static java.util.Collections.addAll;
 import static java.util.Collections.singletonList;
@@ -126,6 +126,7 @@ public class KafkaCluster extends AbstractModel {
     protected static final String BROKER_CERTS_VOLUME_MOUNT = "/opt/kafka/broker-certs";
     protected static final String CLIENT_CA_CERTS_VOLUME_MOUNT = "/opt/kafka/client-ca-certs";
     protected static final String OAUTH_TRUSTED_CERTS_BASE_VOLUME_MOUNT = "/opt/kafka/certificates";
+    protected static final String CUSTOM_AUTHN_SECRETS_VOLUME_MOUNT = "/opt/kafka/custom-authn-secrets";
 
     private static final String NAME_SUFFIX = "-kafka";
 
@@ -223,13 +224,6 @@ public class KafkaCluster extends AbstractModel {
      * used as server certificates for Kafka brokers
      */
     private Map<String, CertAndKey> brokerCerts;
-
-    /**
-     * Lists with volumes, persistent volume claims and related volume mount paths for the storage
-     */
-    List<Volume> dataVolumes;
-    List<PersistentVolumeClaim> dataPvcs;
-    List<VolumeMount> dataVolumeMountPaths;
 
     private static final Map<String, String> DEFAULT_POD_LABELS = new HashMap<>();
     static {
@@ -370,12 +364,15 @@ public class KafkaCluster extends AbstractModel {
 
     @SuppressWarnings({"checkstyle:MethodLength", "checkstyle:JavaNCSS"})
     public static KafkaCluster fromCrd(Reconciliation reconciliation, Kafka kafkaAssembly, KafkaVersion.Lookup versions, Storage oldStorage, int oldReplicas) {
-        KafkaCluster result = new KafkaCluster(reconciliation, kafkaAssembly);
-
-        result.setOwnerReference(kafkaAssembly);
-
         KafkaSpec kafkaSpec = kafkaAssembly.getSpec();
         KafkaClusterSpec kafkaClusterSpec = kafkaSpec.getKafka();
+
+        KafkaCluster result = new KafkaCluster(reconciliation, kafkaAssembly);
+
+        // This also validates that the Kafka version is supported
+        result.kafkaVersion = versions.supportedVersion(kafkaClusterSpec.getVersion());
+
+        result.setOwnerReference(kafkaAssembly);
 
         result.setReplicas(kafkaClusterSpec.getReplicas());
 
@@ -418,10 +415,9 @@ public class KafkaCluster extends AbstractModel {
         }
 
         // Handle Kafka broker configuration
-        KafkaVersion desiredVersion = versions.version(kafkaClusterSpec.getVersion());
         KafkaConfiguration configuration = new KafkaConfiguration(reconciliation, kafkaClusterSpec.getConfig().entrySet());
         configureCruiseControlMetrics(kafkaAssembly, result, configuration);
-        validateConfiguration(reconciliation, kafkaAssembly, desiredVersion, configuration);
+        validateConfiguration(reconciliation, kafkaAssembly, result.kafkaVersion, configuration);
         result.setConfiguration(configuration);
 
         // Parse different types of metrics configurations
@@ -456,8 +452,6 @@ public class KafkaCluster extends AbstractModel {
         } else {
             result.setStorage(kafkaClusterSpec.getStorage());
         }
-
-        result.setDataVolumesClaimsAndMountPaths(result.getStorage());
 
         result.setResources(kafkaClusterSpec.getResources());
 
@@ -497,6 +491,11 @@ public class KafkaCluster extends AbstractModel {
                     result.templateStatefulSetLabels = template.getStatefulset().getMetadata().getLabels();
                     result.templateStatefulSetAnnotations = template.getStatefulset().getMetadata().getAnnotations();
                 }
+            }
+
+            if (template.getPodSet() != null && template.getPodSet().getMetadata() != null) {
+                result.templatePodSetLabels = template.getPodSet().getMetadata().getLabels();
+                result.templatePodSetAnnotations = template.getPodSet().getMetadata().getAnnotations();
             }
 
             ModelUtils.parsePodTemplate(result, template.getPod());
@@ -579,7 +578,6 @@ public class KafkaCluster extends AbstractModel {
 
         result.templatePodLabels = Util.mergeLabelsOrAnnotations(result.templatePodLabels, DEFAULT_POD_LABELS);
 
-        result.kafkaVersion = versions.version(kafkaClusterSpec.getVersion());
         return result;
     }
 
@@ -789,6 +787,10 @@ public class KafkaCluster extends AbstractModel {
         List<Service> services = new ArrayList<>(externalListeners.size());
 
         for (GenericKafkaListener listener : externalListeners)   {
+            if (ListenersUtils.skipCreateBootstrapService(listener)) {
+                continue;
+            }
+
             String serviceName = ListenersUtils.backwardsCompatibleBootstrapServiceName(cluster, listener);
 
             List<ServicePort> ports = Collections.singletonList(
@@ -1261,31 +1263,97 @@ public class KafkaCluster extends AbstractModel {
     }
 
     /**
+     * Internal method which prepares annotations which will be used for Kafka pods. It does so by combining the
+     * annotations passed from KafkaAssemblyOperator with additional annotations.
+     *
+     * @param existingPodAnnotations    Annotations requested from higher level classes
+     * @param storageAnnotation         Indicates whether the storage annotation should be added or not
+     *
+     * @return                          Map with all pod annotations required by Strimzi
+     */
+    private Map<String, String> preparePodAnnotations(Map<String, String> existingPodAnnotations, boolean storageAnnotation)   {
+        Map<String, String> podAnnotations;
+
+        if (existingPodAnnotations != null) {
+            podAnnotations = new HashMap<>(existingPodAnnotations.size() + 4);
+            podAnnotations.putAll(existingPodAnnotations);
+        } else {
+            podAnnotations = new HashMap<>(4);
+        }
+
+        if (storageAnnotation) {
+            podAnnotations.put(ANNO_STRIMZI_IO_STORAGE, ModelUtils.encodeStorageToJson(storage));
+        }
+
+        podAnnotations.put(ANNO_STRIMZI_IO_KAFKA_VERSION, kafkaVersion.version());
+        podAnnotations.put(ANNO_STRIMZI_IO_LOG_MESSAGE_FORMAT_VERSION, getLogMessageFormatVersion());
+        podAnnotations.put(ANNO_STRIMZI_IO_INTER_BROKER_PROTOCOL_VERSION, getInterBrokerProtocolVersion());
+
+        return podAnnotations;
+    }
+
+    /**
+     * Prepares annotations for the controller resource such as StatfulSet or KafkaPodSet.
+     *
+     * @return  Map with all annotations which should be used for thr controller resource
+     */
+    private Map<String, String> prepareControllerAnnotations()   {
+        Map<String, String> controllerAnnotations = new HashMap<>(2);
+        controllerAnnotations.put(ANNO_STRIMZI_IO_KAFKA_VERSION, kafkaVersion.version());
+        controllerAnnotations.put(ANNO_STRIMZI_IO_STORAGE, ModelUtils.encodeStorageToJson(storage));
+
+        return controllerAnnotations;
+    }
+
+    /**
      * Generates a StatefulSet according to configured defaults
      *
      * @param isOpenShift      True iff this operator is operating within OpenShift.
      * @param imagePullPolicy  The image pull policy.
      * @param imagePullSecrets The image pull secrets.
+     * @param podAnnotations   The annotations which should be passed to the pods
+     *
      * @return The generated StatefulSet.
      */
     public StatefulSet generateStatefulSet(boolean isOpenShift,
                                            ImagePullPolicy imagePullPolicy,
-                                           List<LocalObjectReference> imagePullSecrets) {
-        Map<String, String> stsAnnotations = new HashMap<>(2);
-        stsAnnotations.put(ANNO_STRIMZI_IO_KAFKA_VERSION, kafkaVersion.version());
-        stsAnnotations.put(ANNO_STRIMZI_IO_STORAGE, ModelUtils.encodeStorageToJson(storage));
-
-        Map<String, String> podAnnotations = new HashMap<>(4);
-        podAnnotations.put(ANNO_STRIMZI_IO_STORAGE, ModelUtils.encodeStorageToJson(storage));
-        podAnnotations.put(ANNO_STRIMZI_IO_KAFKA_VERSION, kafkaVersion.version());
-        podAnnotations.put(ANNO_STRIMZI_IO_LOG_MESSAGE_FORMAT_VERSION, getLogMessageFormatVersion());
-        podAnnotations.put(ANNO_STRIMZI_IO_INTER_BROKER_PROTOCOL_VERSION, getInterBrokerProtocolVersion());
-
+                                           List<LocalObjectReference> imagePullSecrets,
+                                           Map<String, String> podAnnotations) {
         return createStatefulSet(
-                stsAnnotations,
-                podAnnotations,
-                getVolumes(isOpenShift),
-                getVolumeClaims(),
+                prepareControllerAnnotations(),
+                preparePodAnnotations(podAnnotations, true),
+                getStatefulSetVolumes(isOpenShift),
+                getPersistentVolumeClaimTemplates(),
+                getMergedAffinity(),
+                getInitContainers(imagePullPolicy),
+                getContainers(imagePullPolicy),
+                imagePullSecrets,
+                isOpenShift);
+    }
+
+    /**
+     * Generates the StrimziPodSet for the Kafka cluster. This is used when the UseStrimziPodSets feature gate is
+     * enabled.
+     *
+     * @param replicas          Number of replicas the StrimziPodSet should have. During scale-ups or scale-downs, node
+     *                          sets with different numbers of pods are generated.
+     * @param isOpenShift       Flags whether we are on OpenShift or not
+     * @param imagePullPolicy   Image pull policy which will be used by the pods
+     * @param imagePullSecrets  List of image pull secrets
+     * @param podAnnotations    List of custom pod annotations
+     *
+     * @return                  Generated StrimziPodSet with Kafka pods
+     */
+    public StrimziPodSet generatePodSet(int replicas,
+                                        boolean isOpenShift,
+                                        ImagePullPolicy imagePullPolicy,
+                                        List<LocalObjectReference> imagePullSecrets,
+                                        Map<String, String> podAnnotations) {
+        return createPodSet(
+                replicas,
+                prepareControllerAnnotations(),
+                preparePodAnnotations(podAnnotations, false),
+                podName -> getPodSetVolumes(podName, isOpenShift),
                 getMergedAffinity(),
                 getInitContainers(imagePullPolicy),
                 getContainers(imagePullPolicy),
@@ -1298,9 +1366,11 @@ public class KafkaCluster extends AbstractModel {
      * internal communication with Zookeeper.
      * It also contains the related Kafka brokers private keys.
      *
+     * @param clusterCa The CA for cluster certificates
+     * @param clientsCa The CA for clients certificates
      * @return The generated Secret
      */
-    public Secret generateBrokersSecret() {
+    public Secret generateBrokersSecret(ClusterCa clusterCa, ClientsCa clientsCa) {
 
         Map<String, String> data = new HashMap<>(replicas * 4);
         for (int i = 0; i < replicas; i++) {
@@ -1310,7 +1380,11 @@ public class KafkaCluster extends AbstractModel {
             data.put(KafkaCluster.kafkaPodName(cluster, i) + ".p12", cert.keyStoreAsBase64String());
             data.put(KafkaCluster.kafkaPodName(cluster, i) + ".password", cert.storePasswordAsBase64String());
         }
-        return createSecret(KafkaCluster.brokersSecretName(cluster), data);
+
+        Map<String, String> annotations = Map.of(
+                clusterCa.caCertGenerationAnnotation(), String.valueOf(clusterCa.certGeneration()),
+                clientsCa.caCertGenerationAnnotation(), String.valueOf(clientsCa.certGeneration()));
+        return createSecret(KafkaCluster.brokersSecretName(cluster), data, annotations);
     }
 
     /**
@@ -1360,19 +1434,6 @@ public class KafkaCluster extends AbstractModel {
     }
 
     /**
-     * Fill the StatefulSet with volumes, persistent volume claims and related volume mount paths for the storage
-     * It's called recursively on the related inner volumes if the storage is of {@link Storage#TYPE_JBOD} type
-     *
-     * @param storage the Storage instance from which building volumes, persistent volume claims and
-     *                related volume mount paths
-     */
-    private void setDataVolumesClaimsAndMountPaths(Storage storage) {
-        dataVolumeMountPaths = VolumeUtils.getDataVolumeMountPaths(storage, mountPath);
-        dataPvcs = VolumeUtils.getDataPersistentVolumeClaims(storage);
-        dataVolumes = VolumeUtils.getDataVolumes(storage);
-    }
-
-    /**
      * Generate the persistent volume claims for the storage It's called recursively on the related inner volumes if the
      * storage is of {@link Storage#TYPE_JBOD} type.
      *
@@ -1381,31 +1442,19 @@ public class KafkaCluster extends AbstractModel {
      * @return The PersistentVolumeClaims.
      */
     public List<PersistentVolumeClaim> generatePersistentVolumeClaims(Storage storage) {
-        List<PersistentVolumeClaim> pvcs = new ArrayList<>();
-
-        if (storage != null) {
-            if (storage instanceof PersistentClaimStorage) {
-                Integer id = ((PersistentClaimStorage) storage).getId();
-                String pvcBaseName = VolumeUtils.getVolumePrefix(id) + "-" + name;
-
-                for (int i = 0; i < replicas; i++) {
-                    pvcs.add(createPersistentVolumeClaim(i, pvcBaseName + "-" + i, (PersistentClaimStorage) storage));
-                }
-            } else if (storage instanceof JbodStorage) {
-                for (SingleVolumeStorage volume : ((JbodStorage) storage).getVolumes()) {
-                    if (volume.getId() == null)
-                        throw new InvalidResourceException("Volumes under JBOD storage type have to have 'id' property");
-                    // it's called recursively for setting the information from the current volume
-                    pvcs.addAll(generatePersistentVolumeClaims(volume));
-                }
-            }
-        }
-
-        return pvcs;
+        return createPersistentVolumeClaims(storage, false);
     }
 
-    private List<Volume> getVolumes(boolean isOpenShift) {
-        List<Volume> volumeList = new ArrayList<>(dataVolumes);
+    /**
+     * Generates list of non-data volumes used by Kafka Pods. This includes tmp volumes, mounted secrets and config
+     * maps.
+     *
+     * @param isOpenShift   Indicates whether we are on OpenShift or not
+     *
+     * @return              List of nondata volumes used by the ZooKeeper pods
+     */
+    private List<Volume> getNonDataVolumes(boolean isOpenShift) {
+        List<Volume> volumeList = new ArrayList<>();
 
         if (rack != null || isExposedWithNodePort()) {
             volumeList.add(VolumeUtils.createEmptyDirVolume(INIT_VOLUME_NAME, "1Mi", "Memory"));
@@ -1442,6 +1491,11 @@ public class KafkaCluster extends AbstractModel {
                 KafkaListenerAuthenticationOAuth oauth = (KafkaListenerAuthenticationOAuth) listener.getAuth();
                 volumeList.addAll(AuthenticationUtils.configureOauthCertificateVolumes("oauth-" + ListenersUtils.identifier(listener), oauth.getTlsTrustedCertificates(), isOpenShift));
             }
+
+            if (isListenerWithCustomAuth(listener)) {
+                KafkaListenerAuthenticationCustom custom = (KafkaListenerAuthenticationCustom) listener.getAuth();
+                volumeList.addAll(AuthenticationUtils.configureGenericSecretVolumes("custom-listener-" + ListenersUtils.identifier(listener), custom.getSecrets(), isOpenShift));
+            }
         }
 
         if (authorization instanceof KafkaAuthorizationKeycloak) {
@@ -1452,13 +1506,54 @@ public class KafkaCluster extends AbstractModel {
         return volumeList;
     }
 
-    /* test */ List<PersistentVolumeClaim> getVolumeClaims() {
-        return new ArrayList<>(dataPvcs);
+    /**
+     * Generates a list of volumes used by StatefulSet. For StatefulSet, it needs to include only ephemeral data
+     * volumes. Persistent claim volumes are generated directly by StatefulSet.
+     *
+     * @param isOpenShift   Flag whether we are on OpenShift or not
+     *
+     * @return              List of volumes to be included in the StatefulSet pod template
+     */
+    private List<Volume> getStatefulSetVolumes(boolean isOpenShift) {
+        List<Volume> volumeList = new ArrayList<>();
+
+        volumeList.addAll(VolumeUtils.createStatefulSetVolumes(storage, false));
+        volumeList.addAll(getNonDataVolumes(isOpenShift));
+
+        return volumeList;
+    }
+
+    /**
+     * Generates a list of volumes used by PodSets. For StrimziPodSet, it needs to include also all persistent claim
+     * volumes which StatefulSet would generate on its own.
+     *
+     * @param podName       Name of the pod used to name the volumes
+     * @param isOpenShift   Flag whether we are on OpenShift or not
+     *
+     * @return              List of volumes to be included in the StrimziPodSet pod
+     */
+    private List<Volume> getPodSetVolumes(String podName, boolean isOpenShift) {
+        List<Volume> volumeList = new ArrayList<>();
+
+        volumeList.addAll(VolumeUtils.createPodSetVolumes(podName, storage, false));
+        volumeList.addAll(getNonDataVolumes(isOpenShift));
+
+        return volumeList;
+    }
+
+    /**
+     * Creates a list of Persistent Volume Claim templates for use in StatefulSets
+     *
+     * @return  List of Persistent Volume Claim Templates
+     */
+    /* test */ List<PersistentVolumeClaim> getPersistentVolumeClaimTemplates() {
+        return VolumeUtils.createPersistentVolumeClaimTemplates(storage, false);
     }
 
     private List<VolumeMount> getVolumeMounts() {
-        List<VolumeMount> volumeMountList = new ArrayList<>(dataVolumeMountPaths);
+        List<VolumeMount> volumeMountList = new ArrayList<>();
 
+        volumeMountList.addAll(VolumeUtils.createVolumeMounts(storage, mountPath, false));
         volumeMountList.add(createTempDirVolumeMount());
         volumeMountList.add(VolumeUtils.createVolumeMount(CLUSTER_CA_CERTS_VOLUME, CLUSTER_CA_CERTS_VOLUME_MOUNT));
         volumeMountList.add(VolumeUtils.createVolumeMount(BROKER_CERTS_VOLUME, BROKER_CERTS_VOLUME_MOUNT));
@@ -1482,6 +1577,11 @@ public class KafkaCluster extends AbstractModel {
             if (isListenerWithOAuth(listener))   {
                 KafkaListenerAuthenticationOAuth oauth = (KafkaListenerAuthenticationOAuth) listener.getAuth();
                 volumeMountList.addAll(AuthenticationUtils.configureOauthCertificateVolumeMounts("oauth-" + identifier, oauth.getTlsTrustedCertificates(), OAUTH_TRUSTED_CERTS_BASE_VOLUME_MOUNT + "/oauth-" + identifier + "-certs"));
+            }
+
+            if (isListenerWithCustomAuth(listener)) {
+                KafkaListenerAuthenticationCustom custom = (KafkaListenerAuthenticationCustom) listener.getAuth();
+                volumeMountList.addAll(AuthenticationUtils.configureGenericSecretVolumeMounts("custom-listener-" + identifier, custom.getSecrets(), CUSTOM_AUTHN_SECRETS_VOLUME_MOUNT + "/custom-listener-" + identifier));
             }
         }
 
@@ -1823,6 +1923,15 @@ public class KafkaCluster extends AbstractModel {
     }
 
     /**
+     * Generates the PodDisruptionBudget for operator managed pods.
+     *
+     * @return The PodDisruptionBudget.
+     */
+    public PodDisruptionBudget generateCustomControllerPodDisruptionBudget() {
+        return createCustomControllerPodDisruptionBudget();
+    }
+
+    /**
      * Sets the object with Kafka listeners configuration.
      *
      * @param listeners The listeners.
@@ -1945,11 +2054,11 @@ public class KafkaCluster extends AbstractModel {
     }
 
     private String generateBrokerConfiguration(boolean controlPlaneListener)   {
-        return new KafkaBrokerConfigurationBuilder()
+        return new KafkaBrokerConfigurationBuilder(reconciliation)
                 .withBrokerId()
                 .withRackId(rack)
                 .withZookeeper(cluster)
-                .withLogDirs(VolumeUtils.getDataVolumeMountPaths(storage, mountPath))
+                .withLogDirs(VolumeUtils.createVolumeMounts(storage, mountPath, false))
                 .withListeners(cluster, namespace, listeners, controlPlaneListener)
                 .withAuthorization(cluster, authorization)
                 .withCruiseControl(cluster, cruiseControlSpec, ccNumPartitions, ccReplicationFactor, ccMinInSyncReplicas)

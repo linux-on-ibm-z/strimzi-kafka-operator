@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+set +x
 
 # Generate temporary keystore password
 CERTS_STORE_PASSWORD=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c32)
@@ -62,6 +63,11 @@ if [ "$KAFKA_MIRRORMAKER_METRICS_ENABLED" = "true" ]; then
   export KAFKA_OPTS
 fi
 
+# Disable FIPS if needed
+if [ "$FIPS_MODE" = "disabled" ]; then
+    export KAFKA_OPTS="${KAFKA_OPTS} -Dcom.redhat.fips=false"
+fi
+
 # enabling Tracing agent (initializes Jaeger tracing) as Java agent
 if [ "$STRIMZI_TRACING" = "jaeger" ]; then
   KAFKA_OPTS="$KAFKA_OPTS -javaagent:$(ls "$KAFKA_HOME"/libs/tracing-agent*.jar)=jaeger"
@@ -110,6 +116,8 @@ if [ -n "$STRIMZI_JAVA_SYSTEM_PROPERTIES" ]; then
 fi
 
 . ./set_kafka_gc_options.sh
+
+set -x
 
 # starting Kafka Mirror Maker with final configuration
 # shellcheck disable=SC2086,SC2090

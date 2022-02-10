@@ -67,7 +67,7 @@ include::../api/io.strimzi.api.kafka.model.KafkaClusterSpec.adoc[leveloffset=+1]
 |string
 |listeners            1.2+<.<a|Configures listeners of Kafka brokers.
 |xref:type-GenericKafkaListener-{context}[`GenericKafkaListener`] array
-|config               1.2+<.<a|Kafka broker config properties with the following prefixes cannot be set: listeners, advertised., broker., listener., host.name, port, inter.broker.listener.name, sasl., ssl., security., password., principal.builder.class, log.dir, zookeeper.connect, zookeeper.set.acl, zookeeper.ssl, zookeeper.clientCnxnSocket, authorizer., super.user, cruise.control.metrics.topic, cruise.control.metrics.reporter.bootstrap.servers (with the exception of: zookeeper.connection.timeout.ms, ssl.cipher.suites, ssl.protocol, ssl.enabled.protocols,cruise.control.metrics.topic.num.partitions, cruise.control.metrics.topic.replication.factor, cruise.control.metrics.topic.retention.ms,cruise.control.metrics.topic.auto.create.retries, cruise.control.metrics.topic.auto.create.timeout.ms,cruise.control.metrics.topic.min.insync.replicas).
+|config               1.2+<.<a|Kafka broker config properties with the following prefixes cannot be set: listeners, advertised., broker., listener., host.name, port, inter.broker.listener.name, sasl., ssl., security., password., log.dir, zookeeper.connect, zookeeper.set.acl, zookeeper.ssl, zookeeper.clientCnxnSocket, authorizer., super.user, cruise.control.metrics.topic, cruise.control.metrics.reporter.bootstrap.servers (with the exception of: zookeeper.connection.timeout.ms, ssl.cipher.suites, ssl.protocol, ssl.enabled.protocols,cruise.control.metrics.topic.num.partitions, cruise.control.metrics.topic.replication.factor, cruise.control.metrics.topic.retention.ms,cruise.control.metrics.topic.auto.create.retries, cruise.control.metrics.topic.auto.create.timeout.ms,cruise.control.metrics.topic.min.insync.replicas).
 |map
 |storage              1.2+<.<a|Storage configuration (disk). Cannot be updated. The type depends on the value of the `storage.type` property within the given object, which must be one of [ephemeral, persistent-claim, jbod].
 |xref:type-EphemeralStorage-{context}[`EphemeralStorage`], xref:type-PersistentClaimStorage-{context}[`PersistentClaimStorage`], xref:type-JbodStorage-{context}[`JbodStorage`]
@@ -128,8 +128,8 @@ include::../api/io.strimzi.api.kafka.model.listener.arraylistener.GenericKafkaLi
 |string (one of [ingress, internal, route, loadbalancer, nodeport])
 |tls                 1.2+<.<a|Enables TLS encryption on the listener. This is a required property.
 |boolean
-|authentication      1.2+<.<a|Authentication configuration for this listener. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-512, oauth].
-|xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`]
+|authentication      1.2+<.<a|Authentication configuration for this listener. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-512, oauth, custom].
+|xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`]
 |configuration       1.2+<.<a|Additional listener configuration.
 |xref:type-GenericKafkaListenerConfiguration-{context}[`GenericKafkaListenerConfiguration`]
 |networkPolicyPeers  1.2+<.<a|List of peers which should be able to connect to this listener. Peers in this list are combined using a logical OR operation. If this field is empty or missing, all connections will be allowed for this listener. If this field is present and contains at least one item, the listener only allows the traffic which matches at least one item in this list. For more information, see the https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#networkpolicypeer-v1-networking-k8s-io[external documentation for networking.k8s.io/v1 networkpolicypeer].
@@ -144,7 +144,7 @@ include::../api/io.strimzi.api.kafka.model.listener.arraylistener.GenericKafkaLi
 Used in: xref:type-GenericKafkaListener-{context}[`GenericKafkaListener`]
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationTls` type from xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`].
+The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationTls` type from xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`].
 It must have the value `tls` for the type `KafkaListenerAuthenticationTls`.
 [options="header"]
 |====
@@ -159,7 +159,7 @@ It must have the value `tls` for the type `KafkaListenerAuthenticationTls`.
 Used in: xref:type-GenericKafkaListener-{context}[`GenericKafkaListener`]
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationScramSha512` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`].
+The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationScramSha512` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`].
 It must have the value `scram-sha-512` for the type `KafkaListenerAuthenticationScramSha512`.
 [options="header"]
 |====
@@ -174,7 +174,7 @@ It must have the value `scram-sha-512` for the type `KafkaListenerAuthentication
 Used in: xref:type-GenericKafkaListener-{context}[`GenericKafkaListener`]
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationOAuth` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`].
+The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationOAuth` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`].
 It must have the value `oauth` for the type `KafkaListenerAuthenticationOAuth`.
 [options="header"]
 |====
@@ -240,7 +240,7 @@ It must have the value `oauth` for the type `KafkaListenerAuthenticationOAuth`.
 [id='type-GenericSecretSource-{context}']
 ### `GenericSecretSource` schema reference
 
-Used in: xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`]
+Used in: xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`], xref:type-KafkaListenerAuthenticationCustom-{context}[`KafkaListenerAuthenticationCustom`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`]
 
 
 [options="header"]
@@ -264,6 +264,34 @@ Used in: xref:type-ClientTls-{context}[`ClientTls`], xref:type-KafkaAuthorizatio
 |certificate  1.2+<.<a|The name of the file certificate in the Secret.
 |string
 |secretName   1.2+<.<a|The name of the Secret containing the certificate.
+|string
+|====
+
+[id='type-KafkaListenerAuthenticationCustom-{context}']
+### `KafkaListenerAuthenticationCustom` schema reference
+
+Used in: xref:type-GenericKafkaListener-{context}[`GenericKafkaListener`]
+
+xref:type-KafkaListenerAuthenticationCustom-schema-{context}[Full list of `KafkaListenerAuthenticationCustom` schema properties]
+
+include::../api/io.strimzi.api.kafka.model.listener.KafkaListenerAuthenticationCustom.adoc[leveloffset=+1]
+
+[id='type-KafkaListenerAuthenticationCustom-schema-{context}']
+==== `KafkaListenerAuthenticationCustom` schema properties
+
+
+The `type` property is a discriminator that distinguishes use of the `KafkaListenerAuthenticationCustom` type from xref:type-KafkaListenerAuthenticationTls-{context}[`KafkaListenerAuthenticationTls`], xref:type-KafkaListenerAuthenticationScramSha512-{context}[`KafkaListenerAuthenticationScramSha512`], xref:type-KafkaListenerAuthenticationOAuth-{context}[`KafkaListenerAuthenticationOAuth`].
+It must have the value `custom` for the type `KafkaListenerAuthenticationCustom`.
+[options="header"]
+|====
+|Property               |Description
+|listenerConfig  1.2+<.<a|Configuration to be used for a specific listener. All values are prefixed with listener.name._<listener_name>_.
+|map
+|sasl            1.2+<.<a|Enable or disable SASL on this listener.
+|boolean
+|secrets         1.2+<.<a|Secrets to be mounted to /opt/kafka/custom-authn-secrets/custom-listener-_<listener_name>-<port>_/_<secret_name>_.
+|xref:type-GenericSecretSource-{context}[`GenericSecretSource`] array
+|type            1.2+<.<a|Must be `custom`.
 |string
 |====
 
@@ -297,6 +325,8 @@ include::../api/io.strimzi.api.kafka.model.listener.arraylistener.GenericKafkaLi
 |string (one of [RequireDualStack, SingleStack, PreferDualStack])
 |ipFamilies                    1.2+<.<a|Specifies the IP Families used by the service. Available options are `IPv4` and `IPv6. If unspecified, Kubernetes will choose the default value based on the `ipFamilyPolicy` setting. Available on Kubernetes 1.20 and newer.
 |string (one or more of [IPv6, IPv4]) array
+|createBootstrapService        1.2+<.<a|Whether to create the bootstrap service or not. The bootstrap service is created by default (if not specified differently). This field can be used with the `loadBalancer` type listener.
+|boolean
 |class                         1.2+<.<a|Configures the `Ingress` class that defines which `Ingress` controller will be used. This field can be used only with `ingress` type listener. If not specified, the default Ingress controller will be used.
 |string
 |finalizers                    1.2+<.<a|A list of finalizers which will be configured for the `LoadBalancer` type Services created for this listener. If supported by the platform, the finalizer `service.kubernetes.io/load-balancer-cleanup` to make sure that the external load balancer is deleted together with the service.For more information, see https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#garbage-collecting-load-balancers. This field can be used only with `loadbalancer` type listeners.
@@ -534,6 +564,8 @@ It must have the value `opa` for the type `KafkaAuthorizationOpa`.
 |integer
 |superUsers            1.2+<.<a|List of super users, which is specifically a list of user principals that have unlimited access rights.
 |string array
+|enableMetrics         1.2+<.<a|Defines whether the Open Policy Agent authorizer plugin should provide metrics. Defaults to `false`.
+|boolean
 |====
 
 [id='type-KafkaAuthorizationKeycloak-{context}']
@@ -818,6 +850,8 @@ Used in: xref:type-KafkaClusterSpec-{context}[`KafkaClusterSpec`]
 |xref:type-ResourceTemplate-{context}[`ResourceTemplate`]
 |clusterRoleBinding        1.2+<.<a|Template for the Kafka ClusterRoleBinding.
 |xref:type-ResourceTemplate-{context}[`ResourceTemplate`]
+|podSet                    1.2+<.<a|Template for Kafka `StrimziPodSet` resource.
+|xref:type-ResourceTemplate-{context}[`ResourceTemplate`]
 |====
 
 [id='type-StatefulSetTemplate-{context}']
@@ -1073,6 +1107,8 @@ Used in: xref:type-ZookeeperClusterSpec-{context}[`ZookeeperClusterSpec`]
 |xref:type-ResourceTemplate-{context}[`ResourceTemplate`]
 |jmxSecret              1.2+<.<a|Template for Secret of the Zookeeper Cluster JMX authentication.
 |xref:type-ResourceTemplate-{context}[`ResourceTemplate`]
+|podSet                 1.2+<.<a|Template for ZooKeeper `StrimziPodSet` resource.
+|xref:type-ResourceTemplate-{context}[`ResourceTemplate`]
 |====
 
 [id='type-EntityOperatorSpec-{context}']
@@ -1320,13 +1356,13 @@ Used in: xref:type-CruiseControlSpec-{context}[`CruiseControlSpec`]
 [options="header"]
 |====
 |Property                |Description
-|disk             1.2+<.<a|Broker capacity for disk in bytes, for example, 100Gi.
+|disk             1.2+<.<a|Broker capacity for disk in bytes. Use a number value with either standard Kubernetes byte units (K, M, G, or T), their bibyte (power of two) equivalents (Ki, Mi, Gi, or Ti), or a byte value with or without E notation. For example, 100000M, 100000Mi, 104857600000, or 1e+11.
 |string
 |cpuUtilization   1.2+<.<a|Broker capacity for CPU resource utilization as a percentage (0 - 100).
 |integer
-|inboundNetwork   1.2+<.<a|Broker capacity for inbound network throughput in bytes per second, for example, 10000KB/s.
+|inboundNetwork   1.2+<.<a|Broker capacity for inbound network throughput in bytes per second. Use an integer value with standard Kubernetes byte units (K, M, G) or their bibyte (power of two) equivalents (Ki, Mi, Gi) per second. For example, 10000KiB/s.
 |string
-|outboundNetwork  1.2+<.<a|Broker capacity for outbound network throughput in bytes per second, for example 10000KB/s.
+|outboundNetwork  1.2+<.<a|Broker capacity for outbound network throughput in bytes per second. Use an integer value with standard Kubernetes byte units (K, M, G) or their bibyte (power of two) equivalents (Ki, Mi, Gi) per second. For example, 10000KiB/s.
 |string
 |====
 
@@ -1515,7 +1551,9 @@ Used in: xref:type-KafkaStatus-{context}[`KafkaStatus`]
 [options="header"]
 |====
 |Property                 |Description
-|type              1.2+<.<a|The type of the listener. Can be one of the following three types: `plain`, `tls`, and `external`.
+|type              1.2+<.<a|*The `type` property has been deprecated, and should now be configured using `name`.* The name of the listener.
+|string
+|name              1.2+<.<a|The name of the listener.
 |string
 |addresses         1.2+<.<a|A list of the addresses for this listener.
 |xref:type-ListenerAddress-{context}[`ListenerAddress`] array
@@ -1579,8 +1617,8 @@ include::../api/io.strimzi.api.kafka.model.KafkaConnectSpec.adoc[leveloffset=+1]
 |string
 |tls                    1.2+<.<a|TLS configuration.
 |xref:type-ClientTls-{context}[`ClientTls`]
-|authentication         1.2+<.<a|Authentication configuration for Kafka Connect. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-512, plain, oauth].
-|xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`]
+|authentication         1.2+<.<a|Authentication configuration for Kafka Connect. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-256, scram-sha-512, plain, oauth].
+|xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha256-{context}[`KafkaClientAuthenticationScramSha256`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`]
 |config                 1.2+<.<a|The Kafka Connect configuration. Properties with the following prefixes cannot be set: ssl., sasl., security., listeners, plugin.path, rest., bootstrap.servers, consumer.interceptor.classes, producer.interceptor.classes (with the exception of: ssl.endpoint.identification.algorithm, ssl.cipher.suites, ssl.protocol, ssl.enabled.protocols).
 |map
 |resources              1.2+<.<a|The maximum limits for CPU and memory resources and the requested initial resources. For more information, see the https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#resourcerequirements-v1-core[external documentation for core/v1 resourcerequirements].
@@ -1646,7 +1684,7 @@ include::../api/io.strimzi.api.kafka.model.authentication.KafkaClientAuthenticat
 ==== `KafkaClientAuthenticationTls` schema properties
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaClientAuthenticationTls` type from xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`].
+The `type` property is a discriminator that distinguishes use of the `KafkaClientAuthenticationTls` type from xref:type-KafkaClientAuthenticationScramSha256-{context}[`KafkaClientAuthenticationScramSha256`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`].
 It must have the value `tls` for the type `KafkaClientAuthenticationTls`.
 [options="header"]
 |====
@@ -1654,6 +1692,45 @@ It must have the value `tls` for the type `KafkaClientAuthenticationTls`.
 |certificateAndKey  1.2+<.<a|Reference to the `Secret` which holds the certificate and private key pair.
 |xref:type-CertAndKeySecretSource-{context}[`CertAndKeySecretSource`]
 |type               1.2+<.<a|Must be `tls`.
+|string
+|====
+
+[id='type-KafkaClientAuthenticationScramSha256-{context}']
+### `KafkaClientAuthenticationScramSha256` schema reference
+
+Used in: xref:type-KafkaBridgeSpec-{context}[`KafkaBridgeSpec`], xref:type-KafkaConnectSpec-{context}[`KafkaConnectSpec`], xref:type-KafkaMirrorMaker2ClusterSpec-{context}[`KafkaMirrorMaker2ClusterSpec`], xref:type-KafkaMirrorMakerConsumerSpec-{context}[`KafkaMirrorMakerConsumerSpec`], xref:type-KafkaMirrorMakerProducerSpec-{context}[`KafkaMirrorMakerProducerSpec`]
+
+xref:type-KafkaClientAuthenticationScramSha256-schema-{context}[Full list of `KafkaClientAuthenticationScramSha256` schema properties]
+
+include::../api/io.strimzi.api.kafka.model.authentication.KafkaClientAuthenticationScramSha256.adoc[leveloffset=+1]
+
+[id='type-KafkaClientAuthenticationScramSha256-schema-{context}']
+==== `KafkaClientAuthenticationScramSha256` schema properties
+
+
+[options="header"]
+|====
+|Property               |Description
+|passwordSecret  1.2+<.<a|Reference to the `Secret` which holds the password.
+|xref:type-PasswordSecretSource-{context}[`PasswordSecretSource`]
+|type            1.2+<.<a|Must be `scram-sha-256`.
+|string
+|username        1.2+<.<a|Username used for the authentication.
+|string
+|====
+
+[id='type-PasswordSecretSource-{context}']
+### `PasswordSecretSource` schema reference
+
+Used in: xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationScramSha256-{context}[`KafkaClientAuthenticationScramSha256`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`]
+
+
+[options="header"]
+|====
+|Property           |Description
+|password    1.2+<.<a|The name of the key in the Secret under which the password is stored.
+|string
+|secretName  1.2+<.<a|The name of the Secret containing the password.
 |string
 |====
 
@@ -1670,8 +1747,6 @@ include::../api/io.strimzi.api.kafka.model.authentication.KafkaClientAuthenticat
 ==== `KafkaClientAuthenticationScramSha512` schema properties
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaClientAuthenticationScramSha512` type from xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`].
-It must have the value `scram-sha-512` for the type `KafkaClientAuthenticationScramSha512`.
 [options="header"]
 |====
 |Property               |Description
@@ -1680,21 +1755,6 @@ It must have the value `scram-sha-512` for the type `KafkaClientAuthenticationSc
 |type            1.2+<.<a|Must be `scram-sha-512`.
 |string
 |username        1.2+<.<a|Username used for the authentication.
-|string
-|====
-
-[id='type-PasswordSecretSource-{context}']
-### `PasswordSecretSource` schema reference
-
-Used in: xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`]
-
-
-[options="header"]
-|====
-|Property           |Description
-|password    1.2+<.<a|The name of the key in the Secret under which the password is stored.
-|string
-|secretName  1.2+<.<a|The name of the Secret containing the password.
 |string
 |====
 
@@ -1711,7 +1771,7 @@ include::../api/io.strimzi.api.kafka.model.authentication.KafkaClientAuthenticat
 ==== `KafkaClientAuthenticationPlain` schema properties
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaClientAuthenticationPlain` type from xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`].
+The `type` property is a discriminator that distinguishes use of the `KafkaClientAuthenticationPlain` type from xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha256-{context}[`KafkaClientAuthenticationScramSha256`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`].
 It must have the value `plain` for the type `KafkaClientAuthenticationPlain`.
 [options="header"]
 |====
@@ -1737,7 +1797,7 @@ include::../api/io.strimzi.api.kafka.model.authentication.KafkaClientAuthenticat
 ==== `KafkaClientAuthenticationOAuth` schema properties
 
 
-The `type` property is a discriminator that distinguishes use of the `KafkaClientAuthenticationOAuth` type from xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`].
+The `type` property is a discriminator that distinguishes use of the `KafkaClientAuthenticationOAuth` type from xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha256-{context}[`KafkaClientAuthenticationScramSha256`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`].
 It must have the value `oauth` for the type `KafkaClientAuthenticationOAuth`.
 [options="header"]
 |====
@@ -2580,8 +2640,8 @@ include::../api/io.strimzi.api.kafka.model.KafkaMirrorMakerConsumerSpec.adoc[lev
 |string
 |groupId               1.2+<.<a|A unique string that identifies the consumer group this consumer belongs to.
 |string
-|authentication        1.2+<.<a|Authentication configuration for connecting to the cluster. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-512, plain, oauth].
-|xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`]
+|authentication        1.2+<.<a|Authentication configuration for connecting to the cluster. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-256, scram-sha-512, plain, oauth].
+|xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha256-{context}[`KafkaClientAuthenticationScramSha256`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`]
 |config                1.2+<.<a|The MirrorMaker consumer config. Properties with the following prefixes cannot be set: ssl., bootstrap.servers, group.id, sasl., security., interceptor.classes (with the exception of: ssl.endpoint.identification.algorithm, ssl.cipher.suites, ssl.protocol, ssl.enabled.protocols).
 |map
 |tls                   1.2+<.<a|TLS configuration for connecting MirrorMaker to the cluster.
@@ -2608,8 +2668,8 @@ include::../api/io.strimzi.api.kafka.model.KafkaMirrorMakerProducerSpec.adoc[lev
 |string
 |abortOnSendFailure  1.2+<.<a|Flag to set the MirrorMaker to exit on a failed send. Default value is `true`.
 |boolean
-|authentication      1.2+<.<a|Authentication configuration for connecting to the cluster. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-512, plain, oauth].
-|xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`]
+|authentication      1.2+<.<a|Authentication configuration for connecting to the cluster. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-256, scram-sha-512, plain, oauth].
+|xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha256-{context}[`KafkaClientAuthenticationScramSha256`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`]
 |config              1.2+<.<a|The MirrorMaker producer config. Properties with the following prefixes cannot be set: ssl., bootstrap.servers, sasl., security., interceptor.classes (with the exception of: ssl.endpoint.identification.algorithm, ssl.cipher.suites, ssl.protocol, ssl.enabled.protocols).
 |map
 |tls                 1.2+<.<a|TLS configuration for connecting MirrorMaker to the cluster.
@@ -2693,8 +2753,8 @@ include::../api/io.strimzi.api.kafka.model.KafkaBridgeSpec.adoc[leveloffset=+1]
 |string
 |tls               1.2+<.<a|TLS configuration for connecting Kafka Bridge to the cluster.
 |xref:type-ClientTls-{context}[`ClientTls`]
-|authentication    1.2+<.<a|Authentication configuration for connecting to the cluster. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-512, plain, oauth].
-|xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`]
+|authentication    1.2+<.<a|Authentication configuration for connecting to the cluster. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-256, scram-sha-512, plain, oauth].
+|xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha256-{context}[`KafkaClientAuthenticationScramSha256`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`]
 |http              1.2+<.<a|The HTTP related configuration.
 |xref:type-KafkaBridgeHttpConfig-{context}[`KafkaBridgeHttpConfig`]
 |adminClient       1.2+<.<a|Kafka AdminClient related configuration.
@@ -2990,8 +3050,8 @@ include::../api/io.strimzi.api.kafka.model.KafkaMirrorMaker2ClusterSpec.adoc[lev
 |string
 |tls               1.2+<.<a|TLS configuration for connecting MirrorMaker 2.0 connectors to a cluster.
 |xref:type-ClientTls-{context}[`ClientTls`]
-|authentication    1.2+<.<a|Authentication configuration for connecting to the cluster. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-512, plain, oauth].
-|xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`]
+|authentication    1.2+<.<a|Authentication configuration for connecting to the cluster. The type depends on the value of the `authentication.type` property within the given object, which must be one of [tls, scram-sha-256, scram-sha-512, plain, oauth].
+|xref:type-KafkaClientAuthenticationTls-{context}[`KafkaClientAuthenticationTls`], xref:type-KafkaClientAuthenticationScramSha256-{context}[`KafkaClientAuthenticationScramSha256`], xref:type-KafkaClientAuthenticationScramSha512-{context}[`KafkaClientAuthenticationScramSha512`], xref:type-KafkaClientAuthenticationPlain-{context}[`KafkaClientAuthenticationPlain`], xref:type-KafkaClientAuthenticationOAuth-{context}[`KafkaClientAuthenticationOAuth`]
 |config            1.2+<.<a|The MirrorMaker 2.0 cluster config. Properties with the following prefixes cannot be set: ssl., sasl., security., listeners, plugin.path, rest., bootstrap.servers, consumer.interceptor.classes, producer.interceptor.classes (with the exception of: ssl.endpoint.identification.algorithm, ssl.cipher.suites, ssl.protocol, ssl.enabled.protocols).
 |map
 |====
@@ -3097,7 +3157,9 @@ Used in: xref:type-KafkaRebalance-{context}[`KafkaRebalance`]
 |string array
 |skipHardGoalCheck                        1.2+<.<a|Whether to allow the hard goals specified in the Kafka CR to be skipped in optimization proposal generation. This can be useful when some of those hard goals are preventing a balance solution being found. Default is false.
 |boolean
-|excludedTopics                           1.2+<.<a|A regular expression where any matching topics will be excluded from the calculation of optimization proposals. This expression will be parsed by the java.util.regex.Pattern class; for more information on the supported formar consult the documentation for that class.
+|rebalanceDisk                            1.2+<.<a|Enables intra-broker disk balancing, which balances disk space utilization between disks on the same broker. Only applies to Kafka deployments that use JBOD storage with multiple disks. When enabled, inter-broker balancing is disabled. Default is false.
+|boolean
+|excludedTopics                           1.2+<.<a|A regular expression where any matching topics will be excluded from the calculation of optimization proposals. This expression will be parsed by the java.util.regex.Pattern class; for more information on the supported format consult the documentation for that class.
 |string
 |concurrentPartitionMovementsPerBroker    1.2+<.<a|The upper bound of ongoing partition replica movements going into/out of each broker. Default is 5.
 |integer

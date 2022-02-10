@@ -20,10 +20,7 @@ import io.strimzi.api.kafka.model.storage.PersistentClaimStorage;
 import io.strimzi.api.kafka.model.storage.PersistentClaimStorageBuilder;
 import io.strimzi.operator.common.Annotations;
 import io.strimzi.systemtest.AbstractST;
-import io.strimzi.systemtest.BeforeAllOnce;
 import io.strimzi.systemtest.Constants;
-import io.strimzi.systemtest.annotations.IsolatedSuite;
-import io.strimzi.systemtest.resources.operator.SetupClusterOperator;
 import io.strimzi.systemtest.annotations.ParallelNamespaceTest;
 import io.strimzi.systemtest.kafkaclients.internalClients.InternalKafkaClient;
 import io.strimzi.systemtest.resources.crd.KafkaResource;
@@ -40,11 +37,10 @@ import io.strimzi.systemtest.utils.kafkaUtils.KafkaUserUtils;
 import io.strimzi.systemtest.utils.kafkaUtils.KafkaUtils;
 import io.strimzi.systemtest.utils.kubeUtils.objects.PodUtils;
 import io.strimzi.test.TestUtils;
-import io.strimzi.test.timemeasuring.Operation;
+import io.strimzi.test.annotations.ParallelSuite;
 import io.vertx.core.cli.annotations.Description;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -56,7 +52,6 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.Map;
 
-import static io.strimzi.systemtest.Constants.INFRA_NAMESPACE;
 import static io.strimzi.systemtest.Constants.INTERNAL_CLIENTS_USED;
 import static io.strimzi.systemtest.Constants.REGRESSION;
 import static io.strimzi.systemtest.Constants.ROLLING_UPDATE;
@@ -69,14 +64,16 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @Tag(REGRESSION)
 @Tag(INTERNAL_CLIENTS_USED)
 @Tag(ROLLING_UPDATE)
-@IsolatedSuite
+@ParallelSuite
 class AlternativeReconcileTriggersST extends AbstractST {
     private static final Logger LOGGER = LogManager.getLogger(AlternativeReconcileTriggersST.class);
+
+    private final String namespace = testSuiteNamespaceManager.getMapOfAdditionalNamespaces().get(AlternativeReconcileTriggersST.class.getSimpleName()).stream().findFirst().get();
 
     @ParallelNamespaceTest
     @SuppressWarnings("checkstyle:MethodLength")
     void testManualTriggeringRollingUpdate(ExtensionContext extensionContext) {
-        final String namespaceName = StUtils.getNamespaceBasedOnRbac(INFRA_NAMESPACE, extensionContext);
+        final String namespaceName = StUtils.getNamespaceBasedOnRbac(namespace, extensionContext);
         final String clusterName = mapWithClusterNames.get(extensionContext.getDisplayName());
         final String topicName = mapWithTestTopics.get(extensionContext.getDisplayName());
         final String kafkaClientsName = mapWithKafkaClientNames.get(extensionContext.getDisplayName());
@@ -97,7 +94,7 @@ class AlternativeReconcileTriggersST extends AbstractST {
         Map<String, String> kafkaPods = PodUtils.podSnapshot(namespaceName, kafkaSelector);
         Map<String, String> zkPods = PodUtils.podSnapshot(namespaceName, zkSelector);
 
-        resourceManager.createResource(extensionContext, KafkaTopicTemplates.topic(clusterName, topicName).build());
+        resourceManager.createResource(extensionContext, KafkaTopicTemplates.topic(clusterName, topicName, namespaceName).build());
         // ##############################
         // Attach clients which will continuously produce/consume messages to/from Kafka brokers during rolling update
         // ##############################
@@ -148,8 +145,6 @@ class AlternativeReconcileTriggersST extends AbstractST {
         StatefulSet kafkaSts = kubeClient(namespaceName).getStatefulSet(namespaceName, kafkaName);
         if (kafkaSts != null) {
             // rolling update for kafka
-            String operationId = timeMeasuringSystem.startTimeMeasuring(Operation.ROLLING_UPDATE, extensionContext.getRequiredTestClass().getName(), extensionContext.getDisplayName());
-
             // set annotation to trigger Kafka rolling update
             LOGGER.info("Annotate Kafka StatefulSet {} with manual rolling update annotation", kafkaName);
             kubeClient(namespaceName).statefulSet(kafkaName).withPropagationPolicy(DeletionPropagation.ORPHAN).edit(sts -> new StatefulSetBuilder(sts)
@@ -178,8 +173,6 @@ class AlternativeReconcileTriggersST extends AbstractST {
         StatefulSet zooSts = kubeClient(namespaceName).getStatefulSet(namespaceName, zkName);
         if (zooSts != null) {
             // rolling update for zookeeper
-            String operationId = timeMeasuringSystem.startTimeMeasuring(Operation.ROLLING_UPDATE, extensionContext.getRequiredTestClass().getName(), extensionContext.getDisplayName());
-
             // set annotation to trigger Zookeeper rolling update
             LOGGER.info("Annotate Zookeeper StatefulSet {} with manual rolling update annotation", zkName);
             kubeClient(namespaceName).statefulSet(zkName).withPropagationPolicy(DeletionPropagation.ORPHAN).edit(sts -> new StatefulSetBuilder(sts)
@@ -236,7 +229,7 @@ class AlternativeReconcileTriggersST extends AbstractST {
     @ParallelNamespaceTest
     @Tag(ROLLING_UPDATE)
     void testTriggerRollingUpdateAfterOverrideBootstrap(ExtensionContext extensionContext) throws CertificateException {
-        final String namespaceName = StUtils.getNamespaceBasedOnRbac(INFRA_NAMESPACE, extensionContext);
+        final String namespaceName = StUtils.getNamespaceBasedOnRbac(namespace, extensionContext);
         final String clusterName = mapWithClusterNames.get(extensionContext.getDisplayName());
         final String bootstrapDns = "kafka-test.XXXX.azure.XXXX.net";
 
@@ -289,7 +282,7 @@ class AlternativeReconcileTriggersST extends AbstractST {
 
     @ParallelNamespaceTest
     void testManualRollingUpdateForSinglePod(ExtensionContext extensionContext) {
-        final String namespaceName = StUtils.getNamespaceBasedOnRbac(INFRA_NAMESPACE, extensionContext);
+        final String namespaceName = StUtils.getNamespaceBasedOnRbac(namespace, extensionContext);
         final String clusterName = mapWithClusterNames.get(extensionContext.getDisplayName());
 
         final String kafkaSsName = KafkaResources.kafkaStatefulSetName(clusterName);
@@ -359,7 +352,7 @@ class AlternativeReconcileTriggersST extends AbstractST {
      */
     @ParallelNamespaceTest
     void testAddingAndRemovingJbodVolumes(ExtensionContext extensionContext) {
-        final String namespaceName = StUtils.getNamespaceBasedOnRbac(INFRA_NAMESPACE, extensionContext);
+        final String namespaceName = StUtils.getNamespaceBasedOnRbac(namespace, extensionContext);
         final String clusterName = mapWithClusterNames.get(extensionContext.getDisplayName());
         final String topicName = mapWithTestTopics.get(extensionContext.getDisplayName());
         final String kafkaClientsName = mapWithKafkaClientNames.get(extensionContext.getDisplayName());
@@ -369,8 +362,8 @@ class AlternativeReconcileTriggersST extends AbstractST {
         final String producerName = "hello-world-producer";
         final String consumerName = "hello-world-consumer";
 
-        PersistentClaimStorage vol0 = new PersistentClaimStorageBuilder().withId(0).withSize("100Gi").withDeleteClaim(true).build();
-        PersistentClaimStorage vol1 = new PersistentClaimStorageBuilder().withId(1).withSize("100Gi").withDeleteClaim(true).build();
+        PersistentClaimStorage vol0 = new PersistentClaimStorageBuilder().withId(0).withSize("1Gi").withDeleteClaim(true).build();
+        PersistentClaimStorage vol1 = new PersistentClaimStorageBuilder().withId(1).withSize("1Gi").withDeleteClaim(true).build();
 
         resourceManager.createResource(extensionContext, KafkaTemplates.kafkaJBOD(clusterName, 3, 3, new JbodStorageBuilder().addToVolumes(vol0).build()).build());
 
@@ -428,7 +421,6 @@ class AlternativeReconcileTriggersST extends AbstractST {
         // Add Jbod volume to Kafka => triggers RU
         LOGGER.info("Add JBOD volume to the Kafka cluster {}", kafkaName);
 
-        timeMeasuringSystem.startTimeMeasuring(Operation.ROLLING_UPDATE, extensionContext.getRequiredTestClass().getName(), extensionContext.getDisplayName());
         KafkaResource.replaceKafkaResourceInSpecificNamespace(clusterName, kafka -> {
             JbodStorage storage = (JbodStorage) kafka.getSpec().getKafka().getStorage();
             storage.getVolumes().add(vol1);
@@ -440,7 +432,6 @@ class AlternativeReconcileTriggersST extends AbstractST {
         // Remove Jbod volume to Kafka => triggers RU
         LOGGER.info("Remove JBOD volume to the Kafka cluster {}", kafkaName);
 
-        timeMeasuringSystem.startTimeMeasuring(Operation.ROLLING_UPDATE, extensionContext.getRequiredTestClass().getName(), extensionContext.getDisplayName());
         KafkaResource.replaceKafkaResourceInSpecificNamespace(clusterName, kafka -> {
             JbodStorage storage = (JbodStorage) kafka.getSpec().getKafka().getStorage();
             storage.getVolumes().remove(vol1);
@@ -454,17 +445,6 @@ class AlternativeReconcileTriggersST extends AbstractST {
         // ##############################
         ClientUtils.waitTillContinuousClientsFinish(producerName, consumerName, namespaceName, continuousClientsMessageCount);
         // ##############################
-    }
-
-    @BeforeAll
-    void setup(ExtensionContext extensionContext) {
-        // CO_OPERATION_TIMEOUT_DEFAULT is set here for ensuring that all operations will be fulfilled successfully
-        install = new SetupClusterOperator.SetupClusterOperatorBuilder()
-            .withExtensionContext(BeforeAllOnce.getSharedExtensionContext())
-            .withNamespace(INFRA_NAMESPACE)
-            .withWatchingNamespaces(Constants.WATCH_ALL_NAMESPACES)
-            .createInstallation()
-            .runInstallation();
     }
 }
 

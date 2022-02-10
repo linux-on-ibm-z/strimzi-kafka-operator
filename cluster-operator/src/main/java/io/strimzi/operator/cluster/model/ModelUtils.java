@@ -25,6 +25,7 @@ import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.networking.v1.NetworkPolicyPeer;
 import io.strimzi.api.kafka.model.CertificateAuthority;
 import io.strimzi.api.kafka.model.HasConfigurableMetrics;
+import io.strimzi.api.kafka.model.JvmOptions;
 import io.strimzi.api.kafka.model.SystemProperty;
 import io.strimzi.api.kafka.model.storage.JbodStorage;
 import io.strimzi.api.kafka.model.storage.PersistentClaimStorage;
@@ -143,7 +144,9 @@ public class ModelUtils {
             reasons.add("certificate doesn't exist yet");
             shouldBeRegenerated = true;
         } else {
-            if (clusterCa.keyCreated() || clusterCa.certRenewed() || (isMaintenanceTimeWindowsSatisfied && clusterCa.isExpiring(secret, keyCertName + ".crt"))) {
+            if (clusterCa.keyCreated() || clusterCa.certRenewed() ||
+                    (isMaintenanceTimeWindowsSatisfied && clusterCa.isExpiring(secret, keyCertName + ".crt")) ||
+                    clusterCa.hasCaCertGenerationChanged(secret)) {
                 reasons.add("certificate needs to be renewed");
                 shouldBeRegenerated = true;
             }
@@ -190,7 +193,8 @@ public class ModelUtils {
             data.put(keyCertName + ".password", certAndKey.storePasswordAsBase64String());
         }
 
-        return createSecret(secretName, namespace, labels, ownerReference, data, emptyMap(), emptyMap());
+        return createSecret(secretName, namespace, labels, ownerReference, data,
+                Collections.singletonMap(clusterCa.caCertGenerationAnnotation(), String.valueOf(clusterCa.certGeneration())), emptyMap());
     }
 
     public static Secret createSecret(String name, String namespace, Labels labels, OwnerReference ownerReference,
@@ -441,6 +445,54 @@ public class ModelUtils {
             }
         }
         return validLines;
+    }
+
+    /**
+     * Get the set of JVM options and the Java system properties and fill corresponding Strimzi environment variables
+     * in order to pass them to the running application on the command line
+     *
+     * @param envVars environment variables list to put the JVM options and Java system properties
+     * @param jvmOptions JVM options
+     * @param javaSystemProperties Java system properties
+     */
+    public static void javaOptions(List<EnvVar> envVars, JvmOptions jvmOptions, List<SystemProperty> javaSystemProperties) {
+        StringBuilder strimziJavaOpts = new StringBuilder();
+        String xms = jvmOptions != null ? jvmOptions.getXms() : null;
+        if (xms != null) {
+            strimziJavaOpts.append("-Xms").append(xms);
+        }
+
+        String xmx = jvmOptions != null ? jvmOptions.getXmx() : null;
+        if (xmx != null) {
+            strimziJavaOpts.append(" -Xmx").append(xmx);
+        }
+
+        Map<String, String> xx = jvmOptions != null ? jvmOptions.getXx() : null;
+        if (xx != null) {
+            xx.forEach((k, v) -> {
+                strimziJavaOpts.append(' ').append("-XX:");
+
+                if ("true".equalsIgnoreCase(v))   {
+                    strimziJavaOpts.append("+").append(k);
+                } else if ("false".equalsIgnoreCase(v)) {
+                    strimziJavaOpts.append("-").append(k);
+                } else  {
+                    strimziJavaOpts.append(k).append("=").append(v);
+                }
+            });
+        }
+
+        String optsTrim = strimziJavaOpts.toString().trim();
+        if (!optsTrim.isEmpty()) {
+            envVars.add(AbstractModel.buildEnvVar(AbstractModel.ENV_VAR_STRIMZI_JAVA_OPTS, optsTrim));
+        }
+
+        if (javaSystemProperties != null) {
+            String propsTrim = ModelUtils.getJavaSystemPropertiesToString(javaSystemProperties).trim();
+            if (!propsTrim.isEmpty()) {
+                envVars.add(AbstractModel.buildEnvVar(AbstractModel.ENV_VAR_STRIMZI_JAVA_SYSTEM_PROPERTIES, propsTrim));
+            }
+        }
     }
 
     /**

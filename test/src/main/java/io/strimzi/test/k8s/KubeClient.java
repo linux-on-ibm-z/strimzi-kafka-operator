@@ -43,11 +43,11 @@ import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.fabric8.openshift.api.model.DeploymentConfig;
 import io.fabric8.openshift.client.OpenShiftClient;
-import okhttp3.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -619,6 +619,10 @@ public class KubeClient {
         return client.batch().v1().jobs().inNamespace(getNamespace()).withName(jobName).delete();
     }
 
+    public Boolean deleteJob(final String namespaceName, String jobName) {
+        return client.batch().v1().jobs().inNamespace(namespaceName).withName(jobName).delete();
+    }
+
     public Job getJob(String jobName) {
         return client.batch().v1().jobs().inNamespace(getNamespace()).withName(jobName).get();
     }
@@ -726,7 +730,7 @@ public class KubeClient {
     }
 
     public Service createService(Service service) {
-        return client.services().inNamespace(getNamespace()).createOrReplace(service);
+        return client.services().inNamespace(service.getMetadata().getNamespace()).createOrReplace(service);
     }
 
     /**
@@ -918,14 +922,19 @@ public class KubeClient {
         }
 
         @Override
-        public void onOpen(Response response) {
+        public void onOpen() {
             LOGGER.info("The shell will remain open for 10 seconds.");
             execLatch.countDown();
         }
 
         @Override
         public void onFailure(Throwable t, Response response) {
-            LOGGER.info("shell barfed with code {} and message {}", response.code(), response.message());
+            try {
+                LOGGER.info("shell barfed with code {} and body {}", response.code(), response.body());
+            } catch (IOException e) {
+                LOGGER.info("shell barfed with code {} and body() throws exception", response.code(), e);
+            }
+
             execLatch.countDown();
         }
 

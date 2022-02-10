@@ -59,6 +59,8 @@ import io.strimzi.operator.cluster.model.ClientsCa;
 import io.strimzi.operator.cluster.model.ClusterCa;
 import io.strimzi.operator.cluster.model.CruiseControl;
 import io.strimzi.operator.cluster.model.EntityOperator;
+import io.strimzi.operator.cluster.model.EntityTopicOperator;
+import io.strimzi.operator.cluster.model.EntityUserOperator;
 import io.strimzi.operator.cluster.model.JmxTrans;
 import io.strimzi.operator.cluster.model.KafkaCluster;
 import io.strimzi.operator.cluster.model.KafkaExporter;
@@ -542,7 +544,7 @@ public class KafkaAssemblyOperatorTest {
 
         Map<String, PersistentVolumeClaim> kafkaPvcs = createPvcs(kafkaNamespace, kafkaCluster.getStorage(), kafkaCluster.getReplicas(),
             (replica, storageId) -> {
-                String name = VolumeUtils.getVolumePrefix(storageId);
+                String name = VolumeUtils.createVolumePrefix(storageId, false);
                 return name + "-" + KafkaCluster.kafkaPodName(kafkaName, replica);
             });
 
@@ -592,7 +594,8 @@ public class KafkaAssemblyOperatorTest {
         expectedSecrets.addAll(secrets.stream().map(s -> s.getMetadata().getName()).collect(Collectors.toSet()));
         if (eoConfig != null) {
             // it's expected only when the Entity Operator is deployed by the Cluster Operator
-            expectedSecrets.add(EntityOperator.secretName(kafkaName));
+            expectedSecrets.add(EntityTopicOperator.secretName(kafkaName));
+            expectedSecrets.add(EntityUserOperator.secretName(kafkaName));
         }
 
         when(mockDepOps.reconcile(any(), anyString(), anyString(), any())).thenAnswer(invocation -> {
@@ -671,17 +674,7 @@ public class KafkaAssemblyOperatorTest {
                 certManager,
                 passwordGenerator,
                 supplier,
-                config) {
-            @Override
-            public ReconciliationState createReconciliationState(Reconciliation r, Kafka ka) {
-                return new ReconciliationState(r, ka) {
-                    @Override
-                    public Future<Void> waitForQuiescence(StatefulSet sts) {
-                        return Future.succeededFuture();
-                    }
-                };
-            }
-        };
+                config);
 
         // Now try to create a KafkaCluster based on this CM
         Checkpoint async = context.checkpoint();
@@ -893,7 +886,7 @@ public class KafkaAssemblyOperatorTest {
         ZookeeperCluster updatedZookeeperCluster = ZookeeperCluster.fromCrd(Reconciliation.DUMMY_RECONCILIATION, updatedAssembly, VERSIONS);
         EntityOperator originalEntityOperator = EntityOperator.fromCrd(new Reconciliation("test", originalAssembly.getKind(), originalAssembly.getMetadata().getNamespace(), originalAssembly.getMetadata().getName()), originalAssembly, VERSIONS);
         KafkaExporter originalKafkaExporter = KafkaExporter.fromCrd(new Reconciliation("test", originalAssembly.getKind(), originalAssembly.getMetadata().getNamespace(), originalAssembly.getMetadata().getName()), originalAssembly, VERSIONS);
-        CruiseControl originalCruiseControl = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, originalAssembly, VERSIONS);
+        CruiseControl originalCruiseControl = CruiseControl.fromCrd(Reconciliation.DUMMY_RECONCILIATION, originalAssembly, VERSIONS, updatedKafkaCluster.getStorage());
 
         // create CM, Service, headless service, statefulset and so on
         ResourceOperatorSupplier supplier = ResourceUtils.supplierWithMocks(openShift);
@@ -925,12 +918,12 @@ public class KafkaAssemblyOperatorTest {
         Map<String, PersistentVolumeClaim> kafkaPvcs =
                 createPvcs(clusterNamespace, originalKafkaCluster.getStorage(), originalKafkaCluster.getReplicas(),
                     (replica, storageId) -> {
-                        String name = VolumeUtils.getVolumePrefix(storageId);
+                        String name = VolumeUtils.createVolumePrefix(storageId, false);
                         return name + "-" + KafkaCluster.kafkaPodName(clusterName, replica);
                     });
         kafkaPvcs.putAll(createPvcs(clusterNamespace, updatedKafkaCluster.getStorage(), updatedKafkaCluster.getReplicas(),
             (replica, storageId) -> {
-                String name = VolumeUtils.getVolumePrefix(storageId);
+                String name = VolumeUtils.createVolumePrefix(storageId, false);
                 return name + "-" + KafkaCluster.kafkaPodName(clusterName, replica);
             }));
 
@@ -1110,7 +1103,7 @@ public class KafkaAssemblyOperatorTest {
         when(mockSecretOps.getAsync(clusterNamespace, KafkaCluster.brokersSecretName(clusterName))).thenReturn(
                 Future.succeededFuture()
         );
-        when(mockSecretOps.getAsync(clusterNamespace, EntityOperator.secretName(clusterName))).thenReturn(
+        when(mockSecretOps.getAsync(clusterNamespace, EntityTopicOperator.secretName(clusterName))).thenReturn(
                 Future.succeededFuture()
         );
         when(mockSecretOps.getAsync(clusterNamespace, KafkaExporter.secretName(clusterName))).thenReturn(
@@ -1136,7 +1129,7 @@ public class KafkaAssemblyOperatorTest {
 
         // Mock StatefulSet get
         when(mockStsOps.get(eq(clusterNamespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(
-                originalKafkaCluster.generateStatefulSet(openShift, null, null)
+                originalKafkaCluster.generateStatefulSet(openShift, null, null, null)
         );
         when(mockStsOps.get(eq(clusterNamespace), eq(ZookeeperCluster.zookeeperClusterName(clusterName)))).thenReturn(
                 originalZookeeperCluster.generateStatefulSet(openShift, null, null)
@@ -1246,17 +1239,7 @@ public class KafkaAssemblyOperatorTest {
                 certManager,
                 passwordGenerator,
                 supplier,
-                config) {
-            @Override
-            public ReconciliationState createReconciliationState(Reconciliation r, Kafka ka) {
-                return new ReconciliationState(r, ka) {
-                    @Override
-                    public Future<Void> waitForQuiescence(StatefulSet sts) {
-                        return Future.succeededFuture();
-                    }
-                };
-            }
-        };
+                config);
 
         // Now try to update a KafkaCluster based on this CM
         Checkpoint async = context.checkpoint();
@@ -1266,8 +1249,8 @@ public class KafkaAssemblyOperatorTest {
                 // rolling restart
                 Set<String> expectedRollingRestarts = set();
                 if (StatefulSetOperator.needsRollingUpdate(Reconciliation.DUMMY_RECONCILIATION,
-                        new StatefulSetDiff(Reconciliation.DUMMY_RECONCILIATION, originalKafkaCluster.generateStatefulSet(openShift, null, null),
-                        updatedKafkaCluster.generateStatefulSet(openShift, null, null)))) {
+                        new StatefulSetDiff(Reconciliation.DUMMY_RECONCILIATION, originalKafkaCluster.generateStatefulSet(openShift, null, null, null),
+                        updatedKafkaCluster.generateStatefulSet(openShift, null, null, null)))) {
                     expectedRollingRestarts.add(originalKafkaCluster.getName());
                 }
                 if (StatefulSetOperator.needsRollingUpdate(Reconciliation.DUMMY_RECONCILIATION,
@@ -1335,7 +1318,7 @@ public class KafkaAssemblyOperatorTest {
         // providing the list of ALL StatefulSets for all the Kafka clusters
         Labels newLabels = Labels.forStrimziKind(Kafka.RESOURCE_KIND);
         when(mockStsOps.list(eq(kafkaNamespace), eq(newLabels))).thenReturn(
-                List.of(KafkaCluster.fromCrd(Reconciliation.DUMMY_RECONCILIATION, bar, VERSIONS).generateStatefulSet(openShift, null, null))
+                List.of(KafkaCluster.fromCrd(Reconciliation.DUMMY_RECONCILIATION, bar, VERSIONS).generateStatefulSet(openShift, null, null, null))
         );
 
         when(mockSecretOps.get(eq(kafkaNamespace), eq(AbstractModel.clusterCaCertSecretName(foo.getMetadata().getName()))))
@@ -1347,13 +1330,13 @@ public class KafkaAssemblyOperatorTest {
         Labels barLabels = Labels.forStrimziCluster("bar");
         KafkaCluster barCluster = KafkaCluster.fromCrd(Reconciliation.DUMMY_RECONCILIATION, bar, VERSIONS);
         when(mockStsOps.list(eq(kafkaNamespace), eq(barLabels))).thenReturn(
-                List.of(barCluster.generateStatefulSet(openShift, null, null))
+                List.of(barCluster.generateStatefulSet(openShift, null, null, null))
         );
         when(mockSecretOps.list(eq(kafkaNamespace), eq(barLabels))).thenAnswer(
             invocation -> new ArrayList<>(asList(
                     barClientsCa.caKeySecret(),
                     barClientsCa.caCertSecret(),
-                    barCluster.generateBrokersSecret(),
+                    barCluster.generateBrokersSecret(barClusterCa, barClientsCa),
                     barClusterCa.caCertSecret()))
         );
         when(mockSecretOps.get(eq(kafkaNamespace), eq(AbstractModel.clusterCaCertSecretName(bar.getMetadata().getName())))).thenReturn(barSecrets.get(0));
@@ -1425,20 +1408,20 @@ public class KafkaAssemblyOperatorTest {
         // providing the list of ALL StatefulSets for all the Kafka clusters
         Labels newLabels = Labels.forStrimziKind(Kafka.RESOURCE_KIND);
         when(mockStsOps.list(eq("*"), eq(newLabels))).thenReturn(
-                List.of(KafkaCluster.fromCrd(Reconciliation.DUMMY_RECONCILIATION, bar, VERSIONS).generateStatefulSet(openShift, null, null))
+                List.of(KafkaCluster.fromCrd(Reconciliation.DUMMY_RECONCILIATION, bar, VERSIONS).generateStatefulSet(openShift, null, null, null))
         );
 
         // providing the list StatefulSets for already "existing" Kafka clusters
         Labels barLabels = Labels.forStrimziCluster("bar");
         KafkaCluster barCluster = KafkaCluster.fromCrd(Reconciliation.DUMMY_RECONCILIATION, bar, VERSIONS);
         when(mockStsOps.list(eq("*"), eq(barLabels))).thenReturn(
-                List.of(barCluster.generateStatefulSet(openShift, null, null))
+                List.of(barCluster.generateStatefulSet(openShift, null, null, null))
         );
         when(mockSecretOps.list(eq("*"), eq(barLabels))).thenAnswer(
             invocation -> new ArrayList<>(asList(
                     barClientsCa.caKeySecret(),
                     barClientsCa.caCertSecret(),
-                    barCluster.generateBrokersSecret(),
+                    barCluster.generateBrokersSecret(barClusterCa, barClientsCa),
                     barClusterCa.caCertSecret()))
         );
 

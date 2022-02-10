@@ -36,6 +36,8 @@ public class InternalKafkaClient extends AbstractKafkaClient<InternalKafkaClient
     // name of KafkaUser with/without prefix for secret
     private String completeKafkaUsername = secretPrefix == null ? kafkaUsername : secretPrefix + kafkaUsername;
 
+    private static final Random RANDOM = new Random();
+
     public static class Builder extends AbstractKafkaClient.Builder<Builder> {
 
         private String podName;
@@ -147,7 +149,7 @@ public class InternalKafkaClient extends AbstractKafkaClient<InternalKafkaClient
             .withBootstrapServer(getBootstrapServerFromStatus())
             .withTopicName(topicName)
             .withConsumerGroupName(consumerGroup)
-            .withConsumerInstanceId("instance" + new Random().nextInt(Integer.MAX_VALUE))
+            .withConsumerInstanceId("instance" + RANDOM.nextInt(Integer.MAX_VALUE))
             .build();
 
 
@@ -183,7 +185,7 @@ public class InternalKafkaClient extends AbstractKafkaClient<InternalKafkaClient
             .withBootstrapServer(getBootstrapServerFromStatus())
             .withTopicName(topicName)
             .withConsumerGroupName(consumerGroup)
-            .withConsumerInstanceId("instance" + new Random().nextInt(Integer.MAX_VALUE))
+            .withConsumerInstanceId("instance" + RANDOM.nextInt(Integer.MAX_VALUE))
             .build();
 
         LOGGER.info("Starting verifiableClient tls consumer with the following configuration: {}", consumerTls.toString());
@@ -305,6 +307,7 @@ public class InternalKafkaClient extends AbstractKafkaClient<InternalKafkaClient
             .withClientType(ClientType.CLI_KAFKA_CONSUMER_GROUPS)
             .withUsingPodName(podName)
             .withPodNamespace(namespaceName)
+            .withTopicName(topicName)
             .withBootstrapServer(getBootstrapServerFromStatus())
             .withConsumerGroupName(consumerGroup)
             .build();
@@ -312,6 +315,9 @@ public class InternalKafkaClient extends AbstractKafkaClient<InternalKafkaClient
 
         boolean hasPassed = consumerGroups.run(timeoutMs);
         LOGGER.info("ConsumerGroups finished correctly: {}", hasPassed);
+        if (!hasPassed) {
+            throw new RuntimeException("VerifiableClient has failed. Check stderr for more details.");
+        }
 
         // output parsing
         Map<String, String> currentOffsets = new HashMap<>();

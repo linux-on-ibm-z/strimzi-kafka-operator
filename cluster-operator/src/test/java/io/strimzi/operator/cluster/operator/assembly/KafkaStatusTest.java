@@ -10,9 +10,12 @@ import io.fabric8.kubernetes.api.model.NodeBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.strimzi.api.kafka.StrimziPodSetList;
 import io.strimzi.api.kafka.model.Kafka;
 import io.strimzi.api.kafka.model.KafkaBuilder;
 import io.strimzi.api.kafka.model.KafkaResources;
+import io.strimzi.api.kafka.model.StrimziPodSet;
 import io.strimzi.api.kafka.model.listener.NodeAddressType;
 import io.strimzi.api.kafka.model.listener.arraylistener.GenericKafkaListenerBuilder;
 import io.strimzi.api.kafka.model.listener.arraylistener.GenericKafkaListenerConfigurationBroker;
@@ -161,10 +164,12 @@ public class KafkaStatusTest {
 
             assertThat(status.getListeners().size(), is(2));
             assertThat(status.getListeners().get(0).getType(), is("plain"));
+            assertThat(status.getListeners().get(0).getName(), is("plain"));
             assertThat(status.getListeners().get(0).getAddresses().get(0).getHost(), is("my-service.my-namespace.svc"));
             assertThat(status.getListeners().get(0).getAddresses().get(0).getPort(), is(Integer.valueOf(9092)));
             assertThat(status.getListeners().get(0).getBootstrapServers(), is("my-service.my-namespace.svc:9092"));
             assertThat(status.getListeners().get(1).getType(), is("external"));
+            assertThat(status.getListeners().get(1).getName(), is("external"));
             assertThat(status.getListeners().get(1).getAddresses().get(0).getHost(), is("my-route-address.domain.tld"));
             assertThat(status.getListeners().get(1).getAddresses().get(0).getPort(), is(Integer.valueOf(443)));
             assertThat(status.getListeners().get(1).getBootstrapServers(), is("my-route-address.domain.tld:443"));
@@ -231,14 +236,14 @@ public class KafkaStatusTest {
                         .withType("Ready")
                     .endCondition()
                     .withListeners(new ListenerStatusBuilder()
-                            .withType("plain")
+                            .withName("plain")
                             .withAddresses(new ListenerAddressBuilder()
                                     .withHost("my-service.my-namespace.svc")
                                     .withPort(9092)
                                     .build())
                             .build(),
                             new ListenerStatusBuilder()
-                                    .withType("external")
+                                    .withName("external")
                                     .withAddresses(new ListenerAddressBuilder()
                                             .withHost("my-route-address.domain.tld")
                                             .withPort(443)
@@ -309,6 +314,7 @@ public class KafkaStatusTest {
 
             assertThat(status.getListeners().size(), is(1));
             assertThat(status.getListeners().get(0).getType(), is("plain"));
+            assertThat(status.getListeners().get(0).getName(), is("plain"));
             assertThat(status.getListeners().get(0).getAddresses().get(0).getHost(), is("my-service.my-namespace.svc"));
             assertThat(status.getListeners().get(0).getAddresses().get(0).getPort(), is(Integer.valueOf(9092)));
             assertThat(status.getListeners().get(0).getBootstrapServers(), is("my-service.my-namespace.svc:9092"));
@@ -340,14 +346,14 @@ public class KafkaStatusTest {
                         .withType("Ready")
                     .endCondition()
                     .withListeners(new ListenerStatusBuilder()
-                                    .withType("plain")
+                                    .withName("plain")
                                     .withAddresses(new ListenerAddressBuilder()
                                             .withHost("my-service.my-namespace.svc")
                                             .withPort(9092)
                                             .build())
                                     .build(),
                             new ListenerStatusBuilder()
-                                    .withType("external")
+                                    .withName("external")
                                     .withAddresses(new ListenerAddressBuilder()
                                             .withHost("my-route-address.domain.tld")
                                             .withPort(443)
@@ -380,6 +386,7 @@ public class KafkaStatusTest {
 
             assertThat(status.getListeners().size(), is(1));
             assertThat(status.getListeners().get(0).getType(), is("plain"));
+            assertThat(status.getListeners().get(0).getName(), is("plain"));
             assertThat(status.getListeners().get(0).getAddresses().get(0).getHost(), is("my-service.my-namespace.svc"));
             assertThat(status.getListeners().get(0).getAddresses().get(0).getPort(), is(Integer.valueOf(9092)));
             assertThat(status.getListeners().get(0).getBootstrapServers(), is("my-service.my-namespace.svc:9092"));
@@ -482,7 +489,11 @@ public class KafkaStatusTest {
 
         // Mock the KafkaSetOperator
         StatefulSetOperator mockStsOps = supplier.stsOperations;
-        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null)));
+        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null, null)));
+
+        // Mock the StrimziPodSet operator
+        CrdOperator<KubernetesClient, StrimziPodSet, StrimziPodSetList> mockPodSetOps = supplier.strimziPodSetOperator;
+        when(mockPodSetOps.getAsync(any(), any())).thenReturn(Future.succeededFuture(null));
 
         // Mock the ConfigMapOperator
         ConfigMapOperator mockCmOps = supplier.configMapOperations;
@@ -545,6 +556,7 @@ public class KafkaStatusTest {
 
             assertThat(status.getListeners().size(), is(1));
             assertThat(status.getListeners().get(0).getType(), is("external"));
+            assertThat(status.getListeners().get(0).getName(), is("external"));
 
             List<ListenerAddress> addresses = status.getListeners().get(0).getAddresses();
             assertThat(addresses.size(), is(3));
@@ -599,7 +611,11 @@ public class KafkaStatusTest {
 
         // Mock the KafkaSetOperator
         StatefulSetOperator mockStsOps = supplier.stsOperations;
-        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null)));
+        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null, null)));
+
+        // Mock the StrimziPodSet operator
+        CrdOperator<KubernetesClient, StrimziPodSet, StrimziPodSetList> mockPodSetOps = supplier.strimziPodSetOperator;
+        when(mockPodSetOps.getAsync(any(), any())).thenReturn(Future.succeededFuture(null));
 
         // Mock the ConfigMapOperator
         ConfigMapOperator mockCmOps = supplier.configMapOperations;
@@ -662,6 +678,7 @@ public class KafkaStatusTest {
 
             assertThat(status.getListeners().size(), is(1));
             assertThat(status.getListeners().get(0).getType(), is("external"));
+            assertThat(status.getListeners().get(0).getName(), is("external"));
 
             List<ListenerAddress> addresses = status.getListeners().get(0).getAddresses();
             assertThat(addresses.size(), is(3));
@@ -706,7 +723,11 @@ public class KafkaStatusTest {
 
         // Mock the KafkaSetOperator
         StatefulSetOperator mockStsOps = supplier.stsOperations;
-        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null)));
+        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null, null)));
+
+        // Mock the StrimziPodSet operator
+        CrdOperator<KubernetesClient, StrimziPodSet, StrimziPodSetList> mockPodSetOps = supplier.strimziPodSetOperator;
+        when(mockPodSetOps.getAsync(any(), any())).thenReturn(Future.succeededFuture(null));
 
         // Mock the ConfigMapOperator
         ConfigMapOperator mockCmOps = supplier.configMapOperations;
@@ -769,6 +790,7 @@ public class KafkaStatusTest {
 
             assertThat(status.getListeners().size(), is(1));
             assertThat(status.getListeners().get(0).getType(), is("external"));
+            assertThat(status.getListeners().get(0).getName(), is("external"));
 
             List<ListenerAddress> addresses = status.getListeners().get(0).getAddresses();
             assertThat(addresses.size(), is(3));
@@ -810,7 +832,11 @@ public class KafkaStatusTest {
 
         // Mock the KafkaSetOperator
         StatefulSetOperator mockStsOps = supplier.stsOperations;
-        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null)));
+        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null, null)));
+
+        // Mock the StrimziPodSet operator
+        CrdOperator<KubernetesClient, StrimziPodSet, StrimziPodSetList> mockPodSetOps = supplier.strimziPodSetOperator;
+        when(mockPodSetOps.getAsync(any(), any())).thenReturn(Future.succeededFuture(null));
 
         // Mock the ConfigMapOperator
         ConfigMapOperator mockCmOps = supplier.configMapOperations;
@@ -873,6 +899,7 @@ public class KafkaStatusTest {
 
             assertThat(status.getListeners().size(), is(1));
             assertThat(status.getListeners().get(0).getType(), is("external"));
+            assertThat(status.getListeners().get(0).getName(), is("external"));
 
             List<ListenerAddress> addresses = status.getListeners().get(0).getAddresses();
             assertThat(addresses.size(), is(1));
@@ -913,7 +940,11 @@ public class KafkaStatusTest {
 
         // Mock the KafkaSetOperator
         StatefulSetOperator mockStsOps = supplier.stsOperations;
-        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null)));
+        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null, null)));
+
+        // Mock the StrimziPodSet operator
+        CrdOperator<KubernetesClient, StrimziPodSet, StrimziPodSetList> mockPodSetOps = supplier.strimziPodSetOperator;
+        when(mockPodSetOps.getAsync(any(), any())).thenReturn(Future.succeededFuture(null));
 
         // Mock the ConfigMapOperator
         ConfigMapOperator mockCmOps = supplier.configMapOperations;
@@ -956,6 +987,7 @@ public class KafkaStatusTest {
 
             assertThat(status.getListeners().size(), is(1));
             assertThat(status.getListeners().get(0).getType(), is("external"));
+            assertThat(status.getListeners().get(0).getName(), is("external"));
 
             assertThat(status.getListeners().get(0).getAddresses(), is(emptyList()));
             assertThat(status.getListeners().get(0).getBootstrapServers(), is(nullValue()));
@@ -1099,7 +1131,11 @@ public class KafkaStatusTest {
 
         // Mock the KafkaSetOperator
         StatefulSetOperator mockStsOps = supplier.stsOperations;
-        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null)));
+        when(mockStsOps.getAsync(eq(namespace), eq(KafkaCluster.kafkaClusterName(clusterName)))).thenReturn(Future.succeededFuture(kafkaCluster.generateStatefulSet(false, null, null, null)));
+
+        // Mock the StrimziPodSet operator
+        CrdOperator<KubernetesClient, StrimziPodSet, StrimziPodSetList> mockPodSetOps = supplier.strimziPodSetOperator;
+        when(mockPodSetOps.getAsync(any(), any())).thenReturn(Future.succeededFuture(null));
 
         // Mock the ConfigMapOperator
         ConfigMapOperator mockCmOps = supplier.configMapOperations;
@@ -1141,7 +1177,7 @@ public class KafkaStatusTest {
         @Override
         Future<Void> reconcile(ReconciliationState reconcileState)  {
             ListenerStatus ls = new ListenerStatusBuilder()
-                    .withType("plain")
+                    .withName("plain")
                     .withAddresses(new ListenerAddressBuilder()
                             .withHost("my-service.my-namespace.svc")
                             .withPort(9092)
@@ -1149,7 +1185,7 @@ public class KafkaStatusTest {
                     .build();
 
             ListenerStatus ls2 = new ListenerStatusBuilder()
-                    .withType("external")
+                    .withName("external")
                     .withAddresses(new ListenerAddressBuilder()
                             .withHost("my-route-address.domain.tld")
                             .withPort(443)
@@ -1178,7 +1214,7 @@ public class KafkaStatusTest {
         @Override
         Future<Void> reconcile(ReconciliationState reconcileState)  {
             ListenerStatus ls = new ListenerStatusBuilder()
-                    .withType("plain")
+                    .withName("plain")
                     .withAddresses(new ListenerAddressBuilder()
                             .withHost("my-service.my-namespace.svc")
                             .withPort(9092)

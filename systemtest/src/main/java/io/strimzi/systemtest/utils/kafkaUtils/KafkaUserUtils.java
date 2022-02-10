@@ -31,6 +31,7 @@ public class KafkaUserUtils {
     private static final Logger LOGGER = LogManager.getLogger(KafkaUserUtils.class);
     private static final String KAFKA_USER_NAME_PREFIX = "my-user-";
     private static final long DELETION_TIMEOUT = ResourceOperation.getTimeoutForResourceDeletion();
+    private static final Random RANDOM = new Random();
 
     private KafkaUserUtils() {}
 
@@ -39,7 +40,7 @@ public class KafkaUserUtils {
      * @return random name with additional salt
      */
     public static String generateRandomNameOfKafkaUser() {
-        String salt = new Random().nextInt(Integer.MAX_VALUE) + "-" + new Random().nextInt(Integer.MAX_VALUE);
+        String salt = RANDOM.nextInt(Integer.MAX_VALUE) + "-" + RANDOM.nextInt(Integer.MAX_VALUE);
 
         return  KAFKA_USER_NAME_PREFIX + salt;
     }
@@ -57,11 +58,11 @@ public class KafkaUserUtils {
         waitForKafkaUserCreation(kubeClient().getNamespace(), userName);
     }
 
-    public static void waitForKafkaUserDeletion(String userName) {
+    public static void waitForKafkaUserDeletion(final String namespaceName, String userName) {
         LOGGER.info("Waiting for KafkaUser deletion {}", userName);
         TestUtils.waitFor("KafkaUser deletion " + userName, Constants.POLL_INTERVAL_FOR_RESOURCE_READINESS, DELETION_TIMEOUT,
             () -> {
-                if (KafkaUserResource.kafkaUserClient().inNamespace(kubeClient().getNamespace()).withName(userName).get() == null) {
+                if (KafkaUserResource.kafkaUserClient().inNamespace(namespaceName).withName(userName).get() == null) {
                     return true;
                 } else {
                     LOGGER.warn("KafkaUser {} is not deleted yet! Triggering force delete by cmd client!", userName);
@@ -69,9 +70,13 @@ public class KafkaUserUtils {
                     return false;
                 }
             },
-            () -> LOGGER.info(KafkaUserResource.kafkaUserClient().inNamespace(kubeClient().getNamespace()).withName(userName).get())
+            () -> LOGGER.info(KafkaUserResource.kafkaUserClient().inNamespace(namespaceName).withName(userName).get())
         );
         LOGGER.info("KafkaUser {} deleted", userName);
+    }
+
+    public static void waitForKafkaUserDeletion(String userName) {
+        waitForKafkaUserDeletion(kubeClient().getNamespace(), userName);
     }
 
     public static void waitForKafkaUserIncreaseObserverGeneration(String namespaceName, long observation, String userName) {

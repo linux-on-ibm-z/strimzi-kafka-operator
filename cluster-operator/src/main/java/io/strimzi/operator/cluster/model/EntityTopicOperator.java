@@ -8,6 +8,7 @@ import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.SecurityContext;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
@@ -20,6 +21,7 @@ import io.strimzi.api.kafka.model.ContainerEnvVar;
 import io.strimzi.api.kafka.model.EntityOperatorSpec;
 import io.strimzi.api.kafka.model.EntityTopicOperatorSpec;
 import io.strimzi.api.kafka.model.Kafka;
+import io.strimzi.api.kafka.model.KafkaResources;
 import io.strimzi.api.kafka.model.Probe;
 import io.strimzi.api.kafka.model.ProbeBuilder;
 import io.strimzi.operator.cluster.ClusterOperatorConfig;
@@ -42,6 +44,7 @@ public class EntityTopicOperator extends AbstractModel {
     protected static final String TOPIC_OPERATOR_CONTAINER_NAME = "topic-operator";
     private static final String NAME_SUFFIX = "-entity-topic-operator";
     protected static final String METRICS_AND_LOG_CONFIG_SUFFIX = NAME_SUFFIX + "-config";
+    private static final String CERT_SECRET_KEY_NAME = "entity-operator";
 
     // Port configuration
     protected static final int HEALTHCHECK_PORT = 8080;
@@ -179,6 +182,10 @@ public class EntityTopicOperator extends AbstractModel {
         return cluster + NAME_SUFFIX;
     }
 
+    public static String secretName(String cluster) {
+        return KafkaResources.entityTopicOperatorSecretName(cluster);
+    }
+
     public static String metricAndLogConfigsName(String cluster) {
         return cluster + METRICS_AND_LOG_CONFIG_SUFFIX;
     }
@@ -283,7 +290,7 @@ public class EntityTopicOperator extends AbstractModel {
         varList.add(buildEnvVar(ENV_VAR_SECURITY_PROTOCOL, EntityTopicOperatorSpec.DEFAULT_SECURITY_PROTOCOL));
         varList.add(buildEnvVar(ENV_VAR_TLS_ENABLED, Boolean.toString(true)));
         varList.add(buildEnvVar(ENV_VAR_STRIMZI_GC_LOG_ENABLED, String.valueOf(gcLoggingEnabled)));
-        EntityOperator.javaOptions(varList, getJvmOptions(), javaSystemProperties);
+        ModelUtils.javaOptions(varList, getJvmOptions(), javaSystemProperties);
 
         // Add shared environment variables used for all containers
         varList.addAll(getRequiredEnvVars());
@@ -300,7 +307,7 @@ public class EntityTopicOperator extends AbstractModel {
     private List<VolumeMount> getVolumeMounts() {
         return asList(createTempDirVolumeMount(TOPIC_OPERATOR_TMP_DIRECTORY_DEFAULT_VOLUME_NAME),
                 VolumeUtils.createVolumeMount(logAndMetricsConfigVolumeName, logAndMetricsConfigMountPath),
-                VolumeUtils.createVolumeMount(EntityOperator.TLS_SIDECAR_EO_CERTS_VOLUME_NAME, EntityOperator.TLS_SIDECAR_EO_CERTS_VOLUME_MOUNT),
+                VolumeUtils.createVolumeMount(EntityOperator.ETO_CERTS_VOLUME_NAME, EntityOperator.ETO_CERTS_VOLUME_MOUNT),
                 VolumeUtils.createVolumeMount(EntityOperator.TLS_SIDECAR_CA_CERTS_VOLUME_NAME, EntityOperator.TLS_SIDECAR_CA_CERTS_VOLUME_MOUNT));
     }
 
@@ -358,4 +365,21 @@ public class EntityTopicOperator extends AbstractModel {
         return super.createLog4jProperties(properties);
     }
 
+    /**
+     * Generate the Secret containing the Entity Topic Operator certificate signed by the cluster CA certificate used for TLS based
+     * internal communication with Kafka and Zookeeper.
+     * It also contains the related Entity Topic Operator private key.
+     *
+     * Note: This certificate will be used by both Topic Operator Container and the TLS sidecar container. The User Operator Container use a separate certificate.
+     *
+     * @param clusterCa The cluster CA.
+     * @param isMaintenanceTimeWindowsSatisfied Indicates whether we are in the maintenance window or not.
+     *                                          This is used for certificate renewals
+     * @return The generated Secret.
+     */
+    public Secret generateSecret(ClusterCa clusterCa, boolean isMaintenanceTimeWindowsSatisfied) {
+        Secret secret = clusterCa.entityTopicOperatorSecret();
+        return ModelUtils.buildSecret(reconciliation, clusterCa, secret, namespace, EntityTopicOperator.secretName(cluster), name,
+            CERT_SECRET_KEY_NAME, labels, createOwnerReference(), isMaintenanceTimeWindowsSatisfied);
+    }
 }
