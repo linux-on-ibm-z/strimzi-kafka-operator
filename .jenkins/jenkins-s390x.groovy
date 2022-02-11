@@ -47,14 +47,15 @@ def runSystemTests(String workspace, String testCases, String testProfile, Strin
             "-P${testProfile} " +
             "${groupsTag}" +
             "-DexcludedGroups=${excludeGroups} " +
+            "-Dmaven.javadoc.skip=true -B -V " +
             "-Dit.test=${testCases} " +
-            "-Djava.net.preferIPv4Stack=true " +
-            "-DtrimStackTrace=false " +
-            "-Djansi.force=true " +
-            "-Dstyle.color=always " +
-            "--no-transfer-progress " +
+            //"-Djava.net.preferIPv4Stack=true " +
+            //"-DtrimStackTrace=false " +
+            //"-Djansi.force=true " +
+            //"-Dstyle.color=always " +
+            //"--no-transfer-progress " +
             "-Dfailsafe.rerunFailingTestsCount=2 " +
-            "-Djunit.jupiter.execution.parallel.enabled=true " +
+            "-Djunit.jupiter.execution.parallel.enabled=false " +
             // sequence mode with testInParallel=1 otherwise parallel
             "-Djunit.jupiter.execution.parallel.config.fixed.parallelism=${testsInParallel}")
     //}
