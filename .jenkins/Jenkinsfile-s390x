@@ -8,7 +8,7 @@ pipeline {
     //agent any
     agent{
         node {
-            label "strimzi-pr"
+            label "strimzi-s390x"
         }
     }
     tools {
