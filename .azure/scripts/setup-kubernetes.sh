@@ -67,10 +67,16 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     fi
 
     export KUBECONFIG=$HOME/.kube/config
+
+    if [ "$ARCH" = "s390x" ]; then
+        FORCE_FLAG="--force"
+    else
+        FORCE_FLAG=""
+    fi
     # We can turn on network polices support by adding the following options --network-plugin=cni --cni=calico
     # We have to allow trafic for ITS when NPs are turned on
     # We can allow NP after Strimzi#4092 which should fix some issues on STs side
-    minikube start --vm-driver=docker --kubernetes-version=${KUBE_VERSION} \
+    minikube start ${FORCE_FLAG} --vm-driver=docker --kubernetes-version=${KUBE_VERSION} \
       --insecure-registry=localhost:5000 --extra-config=apiserver.authorization-mode=Node,RBAC \
       --cpus=${MINIKUBE_CPU} --memory=${MINIKUBE_MEMORY}
 
