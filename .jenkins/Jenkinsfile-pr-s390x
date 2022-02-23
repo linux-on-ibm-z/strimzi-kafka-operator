@@ -6,8 +6,11 @@ def DEFAULT_EXCLUDED_GROUPS = "loadbalancer,networkpolicies"
 
 pipeline {
     agent {
-        node {
-            label "strimzi-pr-s390x"
+        dockerfile {
+            filename 'Dockerfile_base_s390x'
+            dir '.jenkins/scripts'
+            label 'strimzi-pr-s390x'
+            args '--privileged -u root:sudo -v /home/jenkins/workspace/:/home/jenkins/workspace/ -v /home/jenkins/s390x-image-tarballs:/root/s390x-image-tarballs'
         }
     }
     parameters {
@@ -132,6 +135,10 @@ pipeline {
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
                     script {
+                        sh(script: """
+                            dockerd &
+                            sleep 10
+                        """)
                         lib.setupKubernetes_s390x()
                     }
                 }
@@ -158,6 +165,8 @@ pipeline {
         stage('Build project') {
             steps {
                 script {
+                    sh(script: "ln -s /opt/apache-maven-3.8.4/bin/mvn /usr/bin/mvn")
+                    sh(script: "ln -s /opt/apache-maven-3.8.4/bin/mvn /usr/local/bin/mvn")
                     withMaven(mavenOpts: '-Djansi.force=true') {
                         sh(script: "mvn clean install -DskipTests -Dstyle.color=always --no-transfer-progress")
                         env.BUILD_PROJECT_STATUS = true
@@ -206,10 +215,6 @@ pipeline {
     post {
         always {
             script {
-                sh(script: "minikube stop || true")
-                sh(script: "minikube delete || true")
-                sh(script: "docker stop s390x-registry || true")
-                sh(script: "docker rm s390x-registry || true")
                 sh(script: "sudo ./systemtest/scripts/results_info.sh ./systemtest/target/failsafe-reports/ ${env.TEST_CASE} ${env.TEST_PROFILE} ${env.BUILD_NUMBER} ${env.KUBE_VERSION} ${env.TEST_ONLY} ${env.TEST_COUNT_RUNNING_IN_PARALLEL} ${env.EXCLUDE_GROUPS} ${env.ENV_VARS}")
                 //lib.postGithubPrComment("results.json")
                 lib.postAction(env.ARTIFACTS_DIR, env.ghprbPullId, env.ghprbActualCommitAuthor, env.ghprbPullTitle, env.ghprbPullLink, env.BUILD_URL, env.WORKSPACE, env.STRIMZI_MAILING_LIST)
