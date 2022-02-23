@@ -8,10 +8,6 @@ def setupKubernetes() {
 }
 
 def setupKubernetes_s390x() {
-    // set SElinux to permisive mode
-    sh(script: "sudo setenforce 0 || true")
-    // Install conntrack
-    sh(script: "sudo yum install -y conntrack")
     sh(script: "${workspace}/.azure/scripts/setup-kubernetes.sh s390x")
 }
 
