@@ -55,7 +55,7 @@ def buildStrimziImages_s390x() {
     sh(script: """
         eval \$(minikube docker-env)
         MVN_ARGS='-DskipTests' make all
-        mvn -e -V -B -Dmaven.javadoc.skip=true -Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2 install
+        #mvn -e -V -B -Dmaven.javadoc.skip=true -Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2 install
     """)
 }
 
