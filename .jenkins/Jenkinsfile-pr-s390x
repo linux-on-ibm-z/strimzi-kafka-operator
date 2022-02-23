@@ -165,6 +165,8 @@ pipeline {
         stage('Build project') {
             steps {
                 script {
+                    sh(script: "ln -s /opt/apache-maven-3.8.4/bin/mvn /usr/bin/mvn")
+                    sh(script: "ln -s /opt/apache-maven-3.8.4/bin/mvn /usr/local/bin/mvn")
                     withMaven(mavenOpts: '-Djansi.force=true') {
                         sh(script: "mvn clean install -DskipTests -Dstyle.color=always --no-transfer-progress")
                         env.BUILD_PROJECT_STATUS = true
