@@ -7,7 +7,7 @@ def DEFAULT_EXCLUDED_GROUPS = "loadbalancer,networkpolicies"
 pipeline {
     agent {
         node {
-            label "strimzi-pr || strimzi-s390x"
+            label "strimzi-pr-s390x"
         }
     }
     parameters {
@@ -32,7 +32,9 @@ pipeline {
         TEST_HELM3_VERSION = "v3.4.2"
         TEST_CLUSTER = "minikube"
         COPY_DOCKER_LOGIN = "true"
-        TEST_ARCH = "${env.NODE_NAME == "strimzi-s390x" ? "s390x" : "amd64"}"
+        DOCKER_BUILDX = "buildx"
+        DOCKER_BUILD_ARGS = "--platform linux/s390x --load"
+        S390X_IMAGE_TARBALL_DIR = "s390x-image-tarballs"
     }
     stages {
         stage('Clean WS') {
@@ -49,10 +51,6 @@ pipeline {
             steps {
                 script {
                     lib = evaluate readFile('./.jenkins/jenkins.groovy')
-                    if(env.TEST_ARCH.contains('s390x')){
-                        //Use hardcoding for ghprbCommentBody since we are not setting up GitHub PRB integration.
-                        env.ghprbCommentBody = "ok to test"
-                    }
                     println("Comment body: ${env.ghprbCommentBody}")
                     env.TEST_CASE = params.TEST_CASE
                     env.TEST_PROFILE = params.TEST_PROFILE
@@ -92,11 +90,7 @@ pipeline {
                         env.TEST_ONLY = "false"
                         env.DOCKER_ORG="strimzi"
                         env.DOCKER_REGISTRY = "localhost:5000"
-                        if(env.TEST_ARCH.contains('s390x')){
-                            env.DOCKER_TAG="latest"
-                        }else{
-                            env.DOCKER_TAG="pr"
-                        }
+                        env.DOCKER_TAG="pr"
                     }
                     if (env.ghprbCommentBody.contains('install_type=')) {
                         env.CLUSTER_OPERATOR_INSTALL_TYPE = env.ghprbCommentBody.split('install_type=')[1].split(/\s/)[0]
@@ -118,20 +112,7 @@ pipeline {
                     if (env.ghprbCommentBody.contains('test_count_running_in_parallel=')) {
                         env.TEST_COUNT_RUNNING_IN_PARALLEL = env.ghprbCommentBody.split('test_count_running_in_parallel=')[1].split(/\s/)[0]
                     } else {
-                        if(env.TEST_ARCH.contains('s390x')){
-                            env.TEST_COUNT_RUNNING_IN_PARALLEL = "1"
-                        }else{
-                            env.TEST_COUNT_RUNNING_IN_PARALLEL = "3"
-                        }
-                    }
-                    
-                    if(env.TEST_ARCH.contains('s390x')){
-                        env.DOCKER_BUILDX = "buildx"
-                        env.DOCKER_BUILD_ARGS = "--platform linux/s390x --load"
-                        env.S390X_IMAGE_TARBALL_DIR = "s390x-image-tarballs"
-                        env.PARALLEL_ENABLED="false"
-                    }else{
-                        env.PARALLEL_ENABLED="true"
+                        env.TEST_COUNT_RUNNING_IN_PARALLEL = "1"
                     }
 
                     println("ENV_VARS: ${env.ENV_VARS}")
@@ -144,7 +125,6 @@ pipeline {
                     println("CLUSTER_OPERATOR_INSTALL_TYPE: ${env.CLUSTER_OPERATOR_INSTALL_TYPE}")
                     println("KUBE_VERSION: ${env.KUBE_VERSION}")
                     println("TEST_COUNT_RUNNING_IN_PARALLEL: ${env.TEST_COUNT_RUNNING_IN_PARALLEL}")
-                    println("TEST_ARCH: ${env.TEST_ARCH}")
                 }
             }
         }
@@ -152,7 +132,7 @@ pipeline {
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
                     script {
-                        lib.setupKubernetes(env.TEST_ARCH)
+                        lib.setupKubernetes_s390x()
                     }
                 }
             }
@@ -170,7 +150,7 @@ pipeline {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
                     script {
-                        lib.installYq(env.WORKSPACE, env.TEST_ARCH)
+                        lib.installYq_s390x(env.WORKSPACE)
                     }
                 }
             }
@@ -191,14 +171,10 @@ pipeline {
             }
             steps {
                 script {
-                    if(env.TEST_ARCH.contains('s390x')){
-                        //The following 2 steps are temporary
-                        lib.buildKeycloakAndOpa_s390x(env.WORKSPACE)
-                        lib.applys390xpatch(env.WORKSPACE)
-                    }else{
-                        lib.setupShellheck()
-                    }
-                    lib.buildStrimziImages(env.TEST_ARCH)
+                    //The following 2 steps are temporary
+                    lib.buildKeycloakAndOpa_s390x(env.WORKSPACE)
+                    lib.applys390xpatch(env.WORKSPACE)
+                    lib.buildStrimziImages()
                     env.BUILD_DOCKER_IMAGE_STATUS = true
                     env.DOCKER_REGISTRY = sh(script: "kubectl get service registry -n kube-system -o=jsonpath='{.spec.clusterIP}'", returnStdout: true).trim() + ":80"
                     println("DOCKER_REGISTRY: ${env.DOCKER_REGISTRY}")
@@ -221,7 +197,7 @@ pipeline {
                             sh(script: "cat ${env.WORKSPACE}/systemtest/src/test/resources/upgrade/StrimziUpgradeST.json")
                             sh(script: "cat ${env.WORKSPACE}/install/cluster-operator/060-Deployment-strimzi-cluster-operator.yaml")
                         }
-                        lib.runSystemTests(env.WORKSPACE, env.TEST_CASE, env.TEST_PROFILE, env.TEST_GROUPS, env.EXCLUDE_GROUPS, env.PARALLEL_ENABLED, env.TEST_COUNT_RUNNING_IN_PARALLEL)
+                        lib.runSystemTests(env.WORKSPACE, env.TEST_CASE, env.TEST_PROFILE, env.TEST_GROUPS, env.EXCLUDE_GROUPS, "false", env.TEST_COUNT_RUNNING_IN_PARALLEL)
                     }
                 }
             }
@@ -237,9 +213,7 @@ pipeline {
                     sh(script: "docker rm s390x-registry || true")
                 }
                 sh(script: "sudo ./systemtest/scripts/results_info.sh ./systemtest/target/failsafe-reports/ ${env.TEST_CASE} ${env.TEST_PROFILE} ${env.BUILD_NUMBER} ${env.KUBE_VERSION} ${env.TEST_ONLY} ${env.TEST_COUNT_RUNNING_IN_PARALLEL} ${env.EXCLUDE_GROUPS} ${env.ENV_VARS}")
-                if(!env.TEST_ARCH.contains('s390x')){
-                    lib.postGithubPrComment("results.json")
-                }
+                lib.postGithubPrComment("results.json")
                 lib.postAction(env.ARTIFACTS_DIR, env.ghprbPullId, env.ghprbActualCommitAuthor, env.ghprbPullTitle, env.ghprbPullLink, env.BUILD_URL, env.WORKSPACE, env.STRIMZI_MAILING_LIST)
             }
         }

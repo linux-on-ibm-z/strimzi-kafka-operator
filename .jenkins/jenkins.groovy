@@ -1,10 +1,18 @@
 
-def setupKubernetes(String arch) {
+def setupKubernetes() {
+    // set SElinux to permisive mode
+    sh(script: "sudo setenforce 0")
+    // Install conntrack
+    sh(script: "sudo yum install -y conntrack")
+    sh(script: "${workspace}/.azure/scripts/setup-kubernetes.sh")
+}
+
+def setupKubernetes_s390x() {
     // set SElinux to permisive mode
     sh(script: "sudo setenforce 0 || true")
     // Install conntrack
     sh(script: "sudo yum install -y conntrack")
-    sh(script: "${workspace}/.azure/scripts/setup-kubernetes.sh ${arch}")
+    sh(script: "${workspace}/.azure/scripts/setup-kubernetes.sh s390x")
 }
 
 def setupShellheck() {
@@ -20,8 +28,12 @@ def installHelm(String workspace) {
     sh(script: "${workspace}/.azure/scripts/setup-helm.sh")
 }
 
-def installYq(String workspace, String arch) {
-    sh(script: "${workspace}/.azure/scripts/install_yq.sh ${arch}")
+def installYq(String workspace) {
+    sh(script: "${workspace}/.azure/scripts/install_yq.sh")
+}
+
+def installYq_s390x(String workspace) {
+    sh(script: "${workspace}/.azure/scripts/install_yq.sh s390x")
 }
 
 def buildKeycloakAndOpa_s390x(String workspace) {
@@ -32,18 +44,11 @@ def applys390xpatch(String workspace) {
     sh(script: "${workspace}/.jenkins/scripts/apply_s390x_patch.sh")
 }
 
-def buildStrimziImages(String arch) {
-    if("${arch}" == "s390x" ){
-        sh(script: """
-            eval \$(minikube docker-env)
-            MVN_ARGS='-DskipTests' make all
-        """)
-    }else{
-        sh(script: """
-            eval \$(minikube docker-env)
-            MVN_ARGS='-Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2' make all
-        """)
-    }
+def buildStrimziImages() {
+    sh(script: """
+        eval \$(minikube docker-env)
+        MVN_ARGS='-Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2' make all
+    """)
 }
 
 def runSystemTests(String workspace, String testCases, String testProfile, String testGroups, String excludeGroups, String parallelEnabled, String testsInParallel) {
@@ -55,7 +60,6 @@ def runSystemTests(String workspace, String testCases, String testProfile, Strin
             "${groupsTag}" +
             "-DexcludedGroups=${excludeGroups} " +
             "${testcasesTag}" +
-            "-Dmaven.javadoc.skip=true -B -V " +
             "-Djava.net.preferIPv4Stack=true " +
             "-DtrimStackTrace=false " +
             "-Dstyle.color=always " +
