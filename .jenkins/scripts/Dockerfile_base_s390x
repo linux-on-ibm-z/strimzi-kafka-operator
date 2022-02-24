@@ -2,8 +2,8 @@ FROM s390x/ubuntu:focal
 
 ARG user=jenkins
 ARG group=jenkins
-ARG uid=1000
-ARG gid=1000
+ARG uid=1001
+ARG gid=1002
 
 ENV JENKINS_HOME /home/${user}
 
