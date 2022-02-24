@@ -10,7 +10,7 @@ pipeline {
             filename 'Dockerfile_base_s390x'
             dir '.jenkins/scripts'
             label 'strimzi-pr-s390x'
-            args "--privileged -u root:sudo -v /home/${env.USER}/workspace/:/home/${env.USER}/workspace/ -v /home/${env.USER}/s390x-image-tarballs:/root/s390x-image-tarballs"
+            args "--privileged -u root:sudo -v /home/${env.ST_USER}/workspace/:/home/${env.ST_USER}/workspace/ -v /home/${env.ST_USER}/s390x-image-tarballs:/root/s390x-image-tarballs"
         }
     }
     parameters {
