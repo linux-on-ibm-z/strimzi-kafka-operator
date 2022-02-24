@@ -136,7 +136,7 @@ pipeline {
                 timeout(time: 10, unit: 'MINUTES') {
                     script {
                         sh(script: """
-                            dockerd &
+                            sudo dockerd &
                             sleep 10
                         """)
                         lib.setupKubernetes_s390x()

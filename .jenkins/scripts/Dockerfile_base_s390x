@@ -12,9 +12,6 @@ RUN groupadd -g ${gid} ${group} \
     && useradd -d "$JENKINS_HOME" -u ${uid} -g ${gid} -m -s /bin/bash ${user}
 RUN chown -R ${user}:${user} /home/${user}
 
-# Add the jenkins user to sudoers
-RUN echo "${user}    ALL=(ALL)    ALL" >> etc/sudoers
-
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update ; \
@@ -23,6 +20,8 @@ RUN apt-get update ; \
     apt-get clean
 
 RUN usermod -aG docker ${user}
+# Add the jenkins user to sudoers
+RUN echo "${user}    ALL=(ALL)    ALL" >> etc/sudoers
 
 RUN wget https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6.1.linux-s390x; \
     mkdir -p ~/.docker/cli-plugins; \
