@@ -19,7 +19,6 @@ RUN apt-get update ; \
     apt-get install -y docker.io iptables ebtables ethtool ca-certificates conntrack socat git nfs-common cifs-utils apt-transport-https gnupg2 software-properties-common bridge-utils ipcalc aufs-tools kmod || true; \
     apt-get clean
 
-RUN usermod -aG docker ${user} && newgrp docker
 # Add the jenkins user to sudoers
 RUN echo "${user}    ALL=(ALL)    NOPASSWD:ALL" >> etc/sudoers
 
