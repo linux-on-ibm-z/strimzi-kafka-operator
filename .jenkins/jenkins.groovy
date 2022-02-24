@@ -51,6 +51,13 @@ def buildStrimziImages() {
     """)
 }
 
+def buildStrimziImages_s390x() {
+    sh(script: """
+        eval \$(minikube docker-env)
+        MVN_ARGS='-DskipTests' make all
+    """)
+}
+
 def runSystemTests(String workspace, String testCases, String testProfile, String testGroups, String excludeGroups, String parallelEnabled, String testsInParallel) {
     def groupsTag = testGroups.isEmpty() ? "" : "-Dgroups=${testGroups} "
     def testcasesTag = testCases.isEmpty() ? "" : "-Dit.test=${testCases} "
