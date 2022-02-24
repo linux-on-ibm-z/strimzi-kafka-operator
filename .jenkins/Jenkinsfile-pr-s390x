@@ -137,7 +137,7 @@ pipeline {
                     script {
                         sh(script: "sudo usermod -aG docker $USER && newgrp docker")
                         sh(script: """
-                            sudo dockerd &
+                            sudo dockerd -G docker &
                             sleep 10
                         """)
                         lib.setupKubernetes_s390x()
