@@ -61,7 +61,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
     touch $HOME/.kube/config
 
     if [ "$ARCH" = "s390x" ]; then
-        docker run -d -p 5000:5000 --name s390x-registry s390x/registry:2.8.0-beta.1
+        sudo docker run -d -p 5000:5000 --name s390x-registry s390x/registry:2.8.0-beta.1
     else
         docker run -d -p 5000:5000 registry
     fi

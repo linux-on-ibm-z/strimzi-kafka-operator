@@ -135,9 +135,8 @@ pipeline {
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
                     script {
-                        sh(script: "sudo usermod -aG docker $USER && newgrp docker")
                         sh(script: """
-                            sudo dockerd -G docker &
+                            sudo dockerd &
                             sleep 10
                         """)
                         lib.setupKubernetes_s390x()
