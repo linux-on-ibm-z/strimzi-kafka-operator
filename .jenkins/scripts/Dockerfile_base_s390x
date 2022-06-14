@@ -15,7 +15,7 @@ RUN chown -R ${user}:${user} /home/${user}
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update ; \
-    apt-get install -y make sudo wget git docker.io shellcheck openjdk-11-jdk tar gzip zip patch ruby curl openssl diffutils file procps python3 perl || true; \
+    apt-get install -y make sudo wget git docker.io shellcheck tar gzip zip patch ruby curl openssl diffutils file procps python3 perl || true; \
     apt-get install -y docker.io iptables ebtables ethtool ca-certificates conntrack socat git nfs-common cifs-utils apt-transport-https gnupg2 software-properties-common bridge-utils ipcalc aufs-tools kmod || true; \
     apt-get clean
 
@@ -28,11 +28,17 @@ RUN wget https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6.1
     chmod a+x /home/${user}/.docker/cli-plugins/docker-buildx; \
     chown -R ${user}:${user} /home/${user}/.docker
 
-RUN wget https://archive.apache.org/dist/maven/maven-3/3.8.4/binaries/apache-maven-3.8.4-bin.tar.gz; \
-    tar -zxf apache-maven-3.8.4-bin.tar.gz; \
-    mv apache-maven-3.8.4 /opt/; \
-    rm -f apache-maven-3.8.4-bin.tar.gz; \
-    ln -s /opt/apache-maven-3.8.4/bin/mvn /usr/bin/mvn; \
-    ln -s /opt/apache-maven-3.8.4/bin/mvn /usr/local/bin/mvn
+RUN wget https://archive.apache.org/dist/maven/maven-3/3.8.5/binaries/apache-maven-3.8.5-bin.tar.gz; \
+    tar -zxf apache-maven-3.8.5-bin.tar.gz; \
+    mv apache-maven-3.8.5 /opt/; \
+    rm -f apache-maven-3.8.5-bin.tar.gz; \
+    ln -s /opt/apache-maven-3.8.5/bin/mvn /usr/bin/mvn; \
+    ln -s /opt/apache-maven-3.8.5/bin/mvn /usr/local/bin/mvn
+
+RUN wget https://github.com/ibmruntimes/semeru11-binaries/releases/download/jdk-11.0.13%2B8_openj9-0.29.0/ibm-semeru-open-jdk_s390x_linux_11.0.13_8_openj9-0.29.0.tar.gz; \
+    tar -zxf ibm-semeru-open-jdk_s390x_linux_11.0.13_8_openj9-0.29.0.tar.gz; \
+    mkdir -p /usr/lib/jvm; \
+    mv jdk-11.0.13+8 /usr/lib/jvm/java-11-openjdk-s390x; \
+    rm -f ibm-semeru-open-jdk_s390x_linux_11.0.13_8_openj9-0.29.0.tar.gz
 
 VOLUME /var/lib/docker

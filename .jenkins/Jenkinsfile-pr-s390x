@@ -141,6 +141,9 @@ pipeline {
                             # Use -G option when starting docker daemon to ensure the Jenkins user can connect to /var/run/docker.sock .
                             sudo dockerd -G \$(id -gn) &
                             sleep 10
+                            export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-s390x
+                            export PATH=\$JAVA_HOME/bin:\$PATH
+                            java --version
                         """)
                         lib.setupKubernetes('s390x')
                     }
