@@ -39,6 +39,10 @@ RUN wget https://github.com/ibmruntimes/semeru11-binaries/releases/download/jdk-
     tar -zxf ibm-semeru-open-jdk_s390x_linux_11.0.13_8_openj9-0.29.0.tar.gz; \
     mkdir -p /usr/lib/jvm; \
     mv jdk-11.0.13+8 /usr/lib/jvm/java-11-openjdk-s390x; \
-    rm -f ibm-semeru-open-jdk_s390x_linux_11.0.13_8_openj9-0.29.0.tar.gz
+    rm -f ibm-semeru-open-jdk_s390x_linux_11.0.13_8_openj9-0.29.0.tar.gz; \
+    ln -s /usr/lib/jvm/java-11-openjdk-s390x/bin/java /usr/bin/java; \
+    ln -s /usr/lib/jvm/java-11-openjdk-s390x/bin/java /usr/local/bin/java; \
+    ln -s /usr/lib/jvm/java-11-openjdk-s390x/bin/javac /usr/bin/javac; \
+    ln -s /usr/lib/jvm/java-11-openjdk-s390x/bin/javac /usr/local/bin/javac
 
 VOLUME /var/lib/docker
