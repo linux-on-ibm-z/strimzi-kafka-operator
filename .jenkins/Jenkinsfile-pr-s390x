@@ -129,6 +129,8 @@ pipeline {
                     println("CLUSTER_OPERATOR_INSTALL_TYPE: ${env.CLUSTER_OPERATOR_INSTALL_TYPE}")
                     println("KUBE_VERSION: ${env.KUBE_VERSION}")
                     println("TEST_COUNT_RUNNING_IN_PARALLEL: ${env.TEST_COUNT_RUNNING_IN_PARALLEL}")
+                    println("TESTCONTAINERS_RYUK_DISABLED: ${env.TESTCONTAINERS_RYUK_DISABLED}")
+                    println("TESTCONTAINERS_CHECKS_DISABLE: ${env.TESTCONTAINERS_CHECKS_DISABLE}")
                 }
             }
         }
