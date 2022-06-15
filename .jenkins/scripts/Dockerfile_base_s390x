@@ -35,11 +35,11 @@ RUN wget https://archive.apache.org/dist/maven/maven-3/3.8.5/binaries/apache-mav
     ln -s /opt/apache-maven-3.8.5/bin/mvn /usr/bin/mvn; \
     ln -s /opt/apache-maven-3.8.5/bin/mvn /usr/local/bin/mvn
 
-RUN wget https://github.com/ibmruntimes/semeru11-binaries/releases/download/jdk-11.0.13%2B8_openj9-0.29.0/ibm-semeru-open-jdk_s390x_linux_11.0.13_8_openj9-0.29.0.tar.gz; \
-    tar -zxf ibm-semeru-open-jdk_s390x_linux_11.0.13_8_openj9-0.29.0.tar.gz; \
+RUN wget https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.13%2B8/OpenJDK11U-jdk_s390x_linux_hotspot_11.0.13_8.tar.gz; \
+    tar -zxf OpenJDK11U-jdk_s390x_linux_hotspot_11.0.13_8.tar.gz; \
     mkdir -p /usr/lib/jvm; \
     mv jdk-11.0.13+8 /usr/lib/jvm/java-11-openjdk-s390x; \
-    rm -f ibm-semeru-open-jdk_s390x_linux_11.0.13_8_openj9-0.29.0.tar.gz; \
+    rm -f OpenJDK11U-jdk_s390x_linux_hotspot_11.0.13_8.tar.gz; \
     ln -s /usr/lib/jvm/java-11-openjdk-s390x/bin/java /usr/bin/java; \
     ln -s /usr/lib/jvm/java-11-openjdk-s390x/bin/java /usr/local/bin/java; \
     ln -s /usr/lib/jvm/java-11-openjdk-s390x/bin/javac /usr/bin/javac; \
