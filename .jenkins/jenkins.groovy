@@ -33,7 +33,8 @@ def buildKeycloakAndOpa_s390x(String workspace) {
 def buildStrimziImages() {
     sh(script: """
         eval \$(minikube docker-env)
-        export MAVEN_OPTS="-Xms2g -Xmx8g"
+        export TESTCONTAINERS_RYUK_DISABLED=TRUE
+        export TESTCONTAINERS_CHECKS_DISABLE=TRUE
         MVN_ARGS='-Dsurefire.rerunFailingTestsCount=5 -Dfailsafe.rerunFailingTestsCount=2' make all
     """)
 }
