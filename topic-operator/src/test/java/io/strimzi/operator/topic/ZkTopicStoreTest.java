@@ -42,9 +42,9 @@ public class ZkTopicStoreTest extends TopicStoreTestBase {
         CompletableFuture future = new CompletableFuture();
         vertx.runOnContext(v -> {
             ZkTopicStore store = new ZkTopicStore(zkClient, "/strimzi/topics");
-            future.complete(store);
+            future.completeOnTimeout(store, 60, TimeUnit.SECONDS);
         });
-        store = (TopicStore) future.get(60, TimeUnit.SECONDS);
+        store = (TopicStore) future.get();
     }
 
     @AfterEach
