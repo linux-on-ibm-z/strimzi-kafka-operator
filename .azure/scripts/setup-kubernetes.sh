@@ -101,7 +101,7 @@ if [ "$TEST_CLUSTER" = "minikube" ]; then
         sed -i 's/:1.11//' kubernetes/cluster/addons/registry/images/Dockerfile
         docker build --pull -t gcr.io/google_containers/kube-registry-proxy:0.4-${ARCH} kubernetes/cluster/addons/registry/images/
         minikube cache add ${ARCH}/registry:2.8.0-beta.1 gcr.io/google_containers/kube-registry-proxy:0.4-${ARCH}
-        minikube addons enable registry --images="Registry=${ARCH}/registry:2.8.0-beta.1,KubeRegistryProxy=google_containers/kube-registry-proxy:0.4-${ARCH}"
+        minikube addons enable registry --images="Registry=${ARCH}/registry:2.8.2,KubeRegistryProxy=google_containers/kube-registry-proxy:0.4-${ARCH}"
         rm -rf kubernetes
     elif [[ "$ARCH" = "arm64" ]]; then
         git clone -b v1.9.11 --depth 1 https://github.com/kubernetes/kubernetes.git
