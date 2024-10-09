@@ -3,6 +3,7 @@ set -x
 
 TEST_HELM3_VERSION=${TEST_HELM3_VERSION:-'v3.15.4'}
 TEST_HELM_UNITTEST_VERSION=${TEST_HELM_UNITTEST_VERSION:-'v0.5.2'}
+ARCH=$(uname -m)
 
 function install_helm3 {
     export HELM_INSTALL_DIR=/usr/bin
@@ -27,6 +28,9 @@ function install_helm3 {
 
 function install_helm_unittest {
     echo "Installing helm unittest plugin ..."
+    if [ $ARCH == "s390x" ]; then
+        TEST_HELM_UNITTEST_VERSION='v0.6.3'
+    fi
     helm plugin install --version $TEST_HELM_UNITTEST_VERSION https://github.com/helm-unittest/helm-unittest.git
 
     echo "Verifying the installation of helm unittest plugin ..."
